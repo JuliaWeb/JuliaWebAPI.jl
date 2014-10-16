@@ -63,10 +63,10 @@ function get_resp(api::Nullable{APISpec}, status::Symbol, resp::Any=nothing)
     stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
 
     if !isnull(api) && get(api).resp_json
-        return Dict{String, Any}(
+        return Dict{String, Any}([
                         "code" => stcode,
                         "data" => stresp 
-                    )
+                    ])
     else
         return stresp
     end
