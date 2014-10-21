@@ -86,6 +86,16 @@ function process(conn::APIResponder)
         cmd = get(msg, "cmd", "")
         debug("received request [$cmd]")
 
+        if beginswith(cmd, ':')    # is a control command
+            ctrlcmd = symbol(cmd[2:end])
+            if ctrlcmd === :terminate
+                break
+            else
+                err("invalid control command $cmd")
+                continue
+            end
+        end
+
         if !haskey(conn.endpoints, cmd)
             respond(conn, Nullable{APISpec}(), :invalid_api)
             continue
@@ -98,5 +108,6 @@ function process(conn::APIResponder)
             respond(conn, Nullable(conn.endpoints[cmd]), :invalid_data)
         end
     end
+    info("stopped processing.")
 end
 
