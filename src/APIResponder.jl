@@ -1,5 +1,4 @@
 type APISpec
-    md::Module
     fn::Function
     resp_json::Bool
     resp_headers::Dict
@@ -27,12 +26,12 @@ end
 
 # register a function as API call
 # TODO: validate method belongs to module?
-function register(conn::APIResponder, m::Module, f::Function; 
+function register(conn::APIResponder, f::Function; 
                   resp_json::Bool=false, 
                   resp_headers::Dict=Dict{String,String}())
     endpt = string(f)
     debug("registering endpoint [$endpt]")
-    conn.endpoints[endpt] = APISpec(m, f, resp_json, resp_headers)
+    conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
 end
 
 function respond(conn::APIResponder, code::Int, headers::Dict, resp::Any)
@@ -109,5 +108,21 @@ function process(conn::APIResponder)
         end
     end
     info("stopped processing.")
+end
+
+function process(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false)
+    Logging.configure(level=log_level)
+    debug("queue is at $addr")
+    api = APIResponder(addr, Context(), bind)
+
+    for spec in apispecs
+        fn = spec[1]
+        resp_json = (length(spec) > 1) ? spec[2] : false
+        resp_headers = (length(spec) > 2) ? spec[3] : Dict{String,String}()
+        register(api, fn, resp_json=resp_json, resp_headers=resp_headers)
+    end
+
+    debug("processing...")
+    process(api)
 end
 
