@@ -111,7 +111,9 @@ function process(conn::APIResponder)
 end
 
 function process(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false)
-    Logging.configure(level=log_level)
+    api_name = get(ENV,"JBAPI_NAME", "noname")
+    logfile = "apisrvr_$(api_name).log"
+    Logging.configure(level=log_level, filename=logfile)
     debug("queue is at $addr")
     api = APIResponder(addr, Context(), bind)
 
@@ -124,5 +126,16 @@ function process(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_le
 
     debug("processing...")
     process(api)
+end
+
+function process()
+    Logging.configure(level=INFO, filename="apisrvr.log")
+    info("Starting api server from JuliaBox environment...")
+    info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
+    info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
+    info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))
+
+    cmd = get(ENV,"JBAPI_CMD","")
+    eval(parse(cmd))
 end
 
