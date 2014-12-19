@@ -5,6 +5,7 @@ using JSON
 using Logging
 using HttpCommon
 using HttpServer
+using Compat
 
 export APIResponder, register, process
 export APIInvoker, apicall, httpresponse, fnresponse, run_rest
