@@ -11,13 +11,13 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
     debug("processing request $req")
 
     try
-        comps = split(req.resource, '?'; limit=2, keep=false)
+        comps = @compat split(req.resource, '?', limit=2, keep=false)
         if isempty(comps)
             res = Response(404)
         else
             path = shift!(comps)
             query = isempty(comps) ? Dict{String,String}() : parsequerystring(comps[1])
-            args = split(path, '/'; keep=false)
+            args = @compat split(path, '/', keep=false)
             data_dict = isempty(req.data) ? query : merge(query, parsequerystring(req.data))
 
             if isempty(args) || !isalnum(args[1]) || !isalpha(args[1][1])
@@ -36,6 +36,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
         end
     catch e
         res = Response(500)
+        Base.error_show(STDERR, e, catch_backtrace())
         err("Exception in handler: $e")
     end
     debug("\tresponse $res")
