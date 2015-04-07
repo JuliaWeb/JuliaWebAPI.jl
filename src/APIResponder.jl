@@ -62,10 +62,7 @@ function get_resp(api::Nullable{APISpec}, status::Symbol, resp::Any=nothing)
     stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
 
     if !isnull(api) && get(api).resp_json
-        return Dict{String, Any}([
-                        "code" => stcode,
-                        "data" => stresp 
-                    ])
+        return @compat Dict{String, Any}("code" => stcode, "data" => stresp)
     else
         return stresp
     end
@@ -85,7 +82,7 @@ function process(conn::APIResponder)
         cmd = get(msg, "cmd", "")
         debug("received request [$cmd]")
 
-        if beginswith(cmd, ':')    # is a control command
+        if startswith(cmd, ':')    # is a control command
             ctrlcmd = symbol(cmd[2:end])
             if ctrlcmd === :terminate
                 break
