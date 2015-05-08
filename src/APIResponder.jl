@@ -127,7 +127,7 @@ end
 
 function process()
     Logging.configure(level=INFO, filename="apisrvr.log")
-    info("Starting api server from JuliaBox environment...")
+    info("Reading api server configuration from environment...")
     info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
     info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))

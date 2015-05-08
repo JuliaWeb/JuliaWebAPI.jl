@@ -1,4 +1,4 @@
-using JuliaBox
+using JuliaWebAPI
 using Compat
 
 function testfn1(arg1, arg2; narg1=1, narg2=2)

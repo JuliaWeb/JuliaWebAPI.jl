@@ -1,4 +1,4 @@
-using JuliaBox
+using JuliaWebAPI
 using Logging
 using Base.Test
 
