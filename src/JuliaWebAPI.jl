@@ -18,13 +18,9 @@ const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, "
                     )
 
 const CONTROL_CMDS = @compat Dict{Symbol, Array}(:terminate => ["terminate"])
-if isless(Base.VERSION, v"0.4.0-")
-    include("nullable.jl")
-end
 
 include("APIResponder.jl")
 include("APIInvoker.jl")
 include("RESTServer.jl")
-
 
 end # module
