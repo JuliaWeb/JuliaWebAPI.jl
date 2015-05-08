@@ -1,5 +1,5 @@
 
-function make_vargs(vargs::Dict{String,String})
+function make_vargs(vargs::Dict{AbstractString,AbstractString})
     arr = Tuple[]
     for (n,v) in vargs
         push!(arr, (symbol(n),v))
@@ -8,7 +8,7 @@ function make_vargs(vargs::Dict{String,String})
 end
 
 function rest_handler(api::APIInvoker, req::Request, res::Response)
-    debug("processing request $req")
+    Logging.debug("processing request $req")
 
     try
         comps = @compat split(req.resource, '?', limit=2, keep=false)
@@ -16,7 +16,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             res = Response(404)
         else
             path = shift!(comps)
-            query = isempty(comps) ? Dict{String,String}() : parsequerystring(comps[1])
+            query = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
             args = @compat split(path, '/', keep=false)
             data_dict = isempty(req.data) ? query : merge(query, parsequerystring(req.data))
 
@@ -25,11 +25,11 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             else
                 cmd = shift!(args)
                 if isempty(data_dict)
-                    debug("calling cmd $cmd with args $args")
+                    Logging.debug("calling cmd $cmd with args $args")
                     res = httpresponse(apicall(api, cmd, args...))
                 else
                     vargs = make_vargs(data_dict)
-                    debug("calling cmd $cmd with args $args, vargs $vargs")
+                    Logging.debug("calling cmd $cmd with args $args, vargs $vargs")
                     res = httpresponse(apicall(api, cmd, args...; vargs...))
                 end
             end
@@ -39,12 +39,12 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
         Base.error_show(STDERR, e, catch_backtrace())
         err("Exception in handler: $e")
     end
-    debug("\tresponse $res")
+    Logging.debug("\tresponse $res")
     return res
 end
 
 on_error(client, err) = err("HTTP error: $err")
-on_listen(port) = info("listening on port $(port)...")
+on_listen(port) = Logging.info("listening on port $(port)...")
 
 type RESTServer
     api::APIInvoker
@@ -68,7 +68,7 @@ type RESTServer
 end
 
 function run_rest(api::APIInvoker, port::Int) 
-    debug("running rest server...")
+    Logging.debug("running rest server...")
     rest = RESTServer(api)
     run(rest.server, port)
 end

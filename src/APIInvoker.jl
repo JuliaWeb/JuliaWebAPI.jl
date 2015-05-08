@@ -3,7 +3,7 @@ type APIInvoker
     ctx::Context
     sock::Socket
 
-    function APIInvoker(addr::String, ctx::Context=Context())
+    function APIInvoker(addr::AbstractString, ctx::Context=Context())
         a = new()
         a.ctx = ctx
         a.sock = Socket(ctx, REQ)
@@ -22,25 +22,25 @@ function data_dict(data::Array)
 end
 
 # call a remote api
-function apicall(conn::APIInvoker, cmd::String, args...; data...)
-    req = Dict{String,Any}()
+function apicall(conn::APIInvoker, cmd::AbstractString, args...; data...)
+    req = Dict{AbstractString,Any}()
 
     req["cmd"] = cmd
     isempty(args) || (req["args"] = args)
     isempty(data) || (req["vargs"] = data_dict(data))
 
     msgstr = JSON.json(req)
-    debug("sending request: $msgstr")
+    Logging.debug("sending request: $msgstr")
     ZMQ.send(conn.sock, Message(JSON.json(req)))
 
     respstr = bytestring(ZMQ.recv(conn.sock))
-    debug("received response $respstr")
+    Logging.debug("received response $respstr")
     JSON.parse(respstr)
 end
 
 # construct an HTTP Response object from the API response
 function httpresponse(resp::Dict)
-    hdrs = merge(HttpCommon.headers(), get(resp, "hdrs", Dict{String,String}()))
+    hdrs = merge(HttpCommon.headers(), get(resp, "hdrs", Dict{AbstractString,AbstractString}()))
     data = get(resp, "data", "")
     if isa(data, Array)
         Response(resp["code"], hdrs, convert(Array{Uint8}, data))
