@@ -1,6 +1,6 @@
-# JuliaBox.jl
+# JuliaWebAPI.jl
 
-[![Build Status](https://travis-ci.org/tanmaykm/JuliaBox.jl.png)](https://travis-ci.org/tanmaykm/JuliaBox.jl)
+[![Build Status](https://travis-ci.org/tanmaykm/JuliaWebAPI.jl.png)](https://travis-ci.org/tanmaykm/JuliaWebAPI.jl)
 
 Facilitates wrapping Julia functions into a remote callable API via ZMQ and HTTP.
 
@@ -12,7 +12,7 @@ Assume a file `srvr.jl` that contains the definition of the following code
 
 ```julia
 #load package
-using JuliaBox
+using JuliaWebAPI
 
 #define function testfn1
 function testfn1(arg1, arg2; narg1=1, narg2=2)
@@ -28,7 +28,7 @@ process([(testfn1, true), (testfn2, false)], "tcp://127.0.0.1:9999"; bind=true)
 
 Then, in a Julia REPL, run the following code
 ```julia
-julia> using JuliaBox   #Load package
+julia> using JuliaWebAPI   #Load package
 
 julia> addprocs(1)    #Create a second process. This process will run the ZMQ listener
 1-element Array{Any,1}:

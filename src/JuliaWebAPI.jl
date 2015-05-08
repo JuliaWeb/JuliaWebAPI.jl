@@ -1,4 +1,4 @@
-module JuliaBox
+module JuliaWebAPI
 
 using ZMQ
 using JSON
