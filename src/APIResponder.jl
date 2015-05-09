@@ -37,7 +37,10 @@ end
 function respond(conn::APIResponder, code::Int, headers::Dict, resp::Any)
     msg = Dict{AbstractString,Any}()
     msg["code"] = code
-    (length(headers) > 0) && (msg["hdrs"] = headers)
+    if !isempty(headers)
+        msg["hdrs"] = headers
+        Logging.debug("sending headers [$headers]")
+    end
     msg["data"] = resp
     msgstr = JSON.json(msg)
     Logging.debug("sending response [$msgstr]")
@@ -51,7 +54,7 @@ function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symb
     try
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
-    catch e
+    catch ex
         respond(conn, Nullable(api), :api_exception)
     end
 end
