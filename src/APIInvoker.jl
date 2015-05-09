@@ -40,13 +40,17 @@ end
 
 # construct an HTTP Response object from the API response
 function httpresponse(resp::Dict)
-    hdrs = merge(HttpCommon.headers(), get(resp, "hdrs", Dict{AbstractString,AbstractString}()))
-    data = get(resp, "data", "")
-    if isa(data, Array)
-        Response(resp["code"], hdrs, convert(Array{Uint8}, data))
-    else
-        Response(resp["code"], hdrs, string(data))
+    hdrs = HttpCommon.headers()
+    if "hdrs" in keys(resp)
+        for (k,v) in resp["hdrs"]
+            hdrs[k] = v
+        end
     end
+    data = get(resp, "data", "")
+    respdata = isa(data, Array) ? convert(Array{Uint8}, data) :
+               isa(data, Dict) ? JSON.json(data) :
+               string(data)
+    Response(resp["code"], hdrs, respdata)
 end
 
 # extract and return the response data as a direct function call would have returned
