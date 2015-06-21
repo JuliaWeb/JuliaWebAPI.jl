@@ -1,16 +1,34 @@
 
 type APIInvoker
+    addr::AbstractString
     ctx::Context
-    sock::Socket
+    sockpool::Array{Socket,1}
 
     function APIInvoker(addr::AbstractString, ctx::Context=Context())
         a = new()
+        a.addr = addr
         a.ctx = ctx
-        a.sock = Socket(ctx, REQ)
-        ZMQ.connect(a.sock, addr)
+        a.sockpool = Socket[]
         a
     end
     APIInvoker(ip::IPv4, port::Int, ctx::Context=Context()) = APIInvoker("tcp://$ip:$port", ctx)
+end
+
+function getsock(conn::APIInvoker)
+    if isempty(conn.sockpool)
+        Logging.debug("creating new socket")
+        sock = Socket(conn.ctx, REQ)
+        ZMQ.connect(sock, conn.addr)
+    else
+        Logging.debug("getting cached socket")
+        sock = pop!(conn.sockpool)
+    end
+    sock
+end
+
+function putsock(conn::APIInvoker, sock::Socket)
+    push!(conn.sockpool, sock)
+    nothing
 end
 
 function data_dict(data::Array)
@@ -31,10 +49,13 @@ function apicall(conn::APIInvoker, cmd::AbstractString, args...; data...)
 
     msgstr = JSON.json(req)
     Logging.debug("sending request: $msgstr")
-    ZMQ.send(conn.sock, Message(JSON.json(req)))
+    sock = getsock(conn)
+    Logging.debug("sock: $sock")
+    ZMQ.send(sock, Message(JSON.json(req)))
 
-    respstr = bytestring(ZMQ.recv(conn.sock))
+    respstr = bytestring(ZMQ.recv(sock))
     Logging.debug("received response $respstr")
+    putsock(conn, sock)
     JSON.parse(respstr)
 end
 

@@ -62,7 +62,7 @@ function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symb
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
     catch ex
-        Logging.error("api_exception: $ex")
+        Logging.error("exception in call_api: $ex")
         respond(conn, Nullable(api), :api_exception)
     end
 end
@@ -97,6 +97,9 @@ function process(conn::APIResponder)
             ctrlcmd = symbol(cmd[2:end])
             if ctrlcmd === :terminate
                 respond(conn, Nullable{APISpec}(), :terminate, "")
+                break
+            elseif ctrlcmd === :terminate_tell_who
+                respond(conn, Nullable{APISpec}(), myid())
                 break
             else
                 err("invalid control command $cmd")

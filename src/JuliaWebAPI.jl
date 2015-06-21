@@ -7,8 +7,11 @@ using HttpCommon
 using HttpServer
 using Compat
 
+import Base: run, close
+
 export APIResponder, register, process
 export APIInvoker, apicall, httpresponse, fnresponse, run_rest
+export Multiplexer, run, close, processors, addprocessors
 
 const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, ""],
                         :invalid_api        => [404, -1, "invalid api"],
@@ -23,5 +26,6 @@ const CONTROL_CMDS = @compat Dict{Symbol, Array}(:terminate => ["terminate"])
 include("APIResponder.jl")
 include("APIInvoker.jl")
 include("RESTServer.jl")
+include("multiplexer.jl")
 
 end # module
