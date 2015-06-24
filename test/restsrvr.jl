@@ -8,7 +8,7 @@ addprocs(1)
 
 @spawnat 2 include("srvr.jl")
 
-const apiclnt = APIInvoker("tcp://127.0.0.1:9999")
+const apiclnt = APIInvoker("tcp://127.0.0.1:9999", 1)
 
 run_rest(apiclnt, 8888)
 

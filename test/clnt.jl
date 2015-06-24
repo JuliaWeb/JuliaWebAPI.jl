@@ -4,7 +4,7 @@ using Base.Test
 
 Logging.configure(level=INFO)
 
-const apiclnt = APIInvoker("tcp://127.0.0.1:9999")
+const apiclnt = APIInvoker("tcp://127.0.0.1:9999", 1)
 
 const NCALLS = 100
 

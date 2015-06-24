@@ -11,7 +11,7 @@ import Base: run, close
 
 export APIResponder, register, process
 export APIInvoker, apicall, httpresponse, fnresponse, run_rest
-export Multiplexer, run, close, processors, addprocessors
+export Multiplexer, run, close
 
 const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, ""],
                         :invalid_api        => [404, -1, "invalid api"],

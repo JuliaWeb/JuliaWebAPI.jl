@@ -1,3 +1,6 @@
+# print the pid out for the monitor process
+println(getpid())
+
 using JuliaWebAPI
 using Logging
 

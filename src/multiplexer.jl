@@ -3,20 +3,18 @@ type Multiplexer
     backend::Socket
     frontaddr::AbstractString
     backaddr::AbstractString
-    processor_fn::Function
-    processor_count::Int
     ctx::Context
 
-    function Multiplexer(frontport::Integer, backport::Integer, processor_fn::Function, processor_count::Integer, ctx::Context=Context(1))
-        Multiplexer("tcp://*:$frontport", "tcp://*:$backport", processor_fn, processor_count, ctx)
+    function Multiplexer(frontport::Integer, backport::Integer, ctx::Context=Context(1))
+        Multiplexer("tcp://*:$frontport", "tcp://*:$backport", ctx)
     end
 
-    function Multiplexer(frontaddr::AbstractString, backaddr::AbstractString, processor_fn::Function, processor_count::Integer, ctx::Context=Context(1))
+    function Multiplexer(frontaddr::AbstractString, backaddr::AbstractString, ctx::Context=Context(1))
         frontsock = Socket(ctx, XREP)
         backsock = Socket(ctx, XREQ)
         ZMQ.bind(frontsock, frontaddr)
         ZMQ.bind(backsock, backaddr)
-        new(frontsock, backsock, frontaddr, backaddr, processor_fn, processor_count, ctx)
+        new(frontsock, backsock, frontaddr, backaddr, ctx)
     end
 end
 
@@ -53,18 +51,3 @@ function multi_back_conn(backaddr::AbstractString, ctx::Context=Context(1))
     Logging.info("Connected to multiplexer backend at $backaddr")
     backconn
 end
-
-# exclude 1, the client master process
-# exclude 2, the multiplexer process (assuming this command is run on the multiplexer)
-processors() = setdiff(workers(), myid())
-
-function addprocessors(mplex::Multiplexer, n::Integer=mplex.processor_count)
-    Logging.info("Launching $n processors...")
-    procids = addprocs(n)
-    for procid in procids
-        remotecall(procid, mplex.processor_fn)
-    end
-end
-
-#function reduceprocessor(mplex::Multiplexer, n::Integer=1)
-#end

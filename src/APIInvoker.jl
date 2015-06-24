@@ -3,31 +3,66 @@ type APIInvoker
     addr::AbstractString
     ctx::Context
     sockpool::Array{Socket,1}
+    usedpool::Array{Socket,1}
+    maxconn::Int
+    connwaitq::Array{RemoteRef,1}
 
-    function APIInvoker(addr::AbstractString, ctx::Context=Context())
+    function APIInvoker(addr::AbstractString, maxconn::Int, ctx::Context=Context())
         a = new()
         a.addr = addr
         a.ctx = ctx
         a.sockpool = Socket[]
+        a.usedpool = Socket[]
+        a.maxconn = maxconn
+        a.connwaitq = RemoteRef[]
         a
     end
-    APIInvoker(ip::IPv4, port::Int, ctx::Context=Context()) = APIInvoker("tcp://$ip:$port", ctx)
+    APIInvoker(ip::IPv4, port::Int, maxconn::Int, ctx::Context=Context()) = APIInvoker("tcp://$ip:$port", maxconn, ctx)
+end
+
+function inuse(conn::APIInvoker)
+    nused = length(conn.usedpool)
+    Logging.debug("$nused connections in use")
+    nused
+end
+
+function infree(conn::APIInvoker)
+    nfree = length(conn.sockpool)
+    Logging.debug("$nfree connections free")
+    nfree
 end
 
 function getsock(conn::APIInvoker)
     if isempty(conn.sockpool)
-        Logging.debug("creating new socket")
-        sock = Socket(conn.ctx, REQ)
-        ZMQ.connect(sock, conn.addr)
+        if length(conn.usedpool) == conn.maxconn
+            Logging.debug("all connections used. waiting...")
+            r = RemoteRef()
+            push!(conn.connwaitq, r)
+            sock = take!(r)
+            Logging.debug("out of wait...")
+        else
+            Logging.debug("creating new socket")
+            sock = Socket(conn.ctx, REQ)
+            ZMQ.connect(sock, conn.addr)
+        end
     else
         Logging.debug("getting cached socket")
         sock = pop!(conn.sockpool)
     end
+    push!(conn.usedpool, sock)
+    Logging.debug("getsock usedpool size: $(length(conn.usedpool)) objid: $(object_id(conn))")
     sock
 end
 
 function putsock(conn::APIInvoker, sock::Socket)
-    push!(conn.sockpool, sock)
+    splice!(conn.usedpool, findin(conn.usedpool, [sock])[1])
+    if isempty(conn.connwaitq)
+        push!(conn.sockpool, sock)
+    else
+        r = pop!(conn.connwaitq)
+        put!(r, sock)
+    end
+    Logging.debug("putsock usedpool size: $(length(conn.usedpool)) objid: $(object_id(conn))")
     nothing
 end
 
