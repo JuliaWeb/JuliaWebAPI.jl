@@ -7,6 +7,15 @@ function make_vargs(vargs::Dict{AbstractString,AbstractString})
     arr
 end
 
+function isvalidcmd(cmd::AbstractString)
+    isempty(cmd) && return false
+    Base.is_id_start_char(cmd[1]) || return false
+    for c in cmd
+        Base.is_id_char(c) || return false
+    end
+    true
+end
+
 function rest_handler(api::APIInvoker, req::Request, res::Response)
     Logging.debug("processing request $req")
 
@@ -20,7 +29,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             args = @compat split(path, '/', keep=false)
             data_dict = isempty(req.data) ? query : merge(query, parsequerystring(req.data))
 
-            if isempty(args) || !isalnum(args[1]) || !isalpha(args[1][1])
+            if isempty(args) || !isvalidcmd(args[1])
                 res = Response(404)
             else
                 cmd = shift!(args)
