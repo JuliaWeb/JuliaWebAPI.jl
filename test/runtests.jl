@@ -1,7 +1,14 @@
-addprocs(1)
+srvrscript = joinpath(dirname(@__FILE__), "srvr.jl")
+srvrcmd = `$(joinpath(JULIA_HOME, "julia")) $(srvrscript)`
+println("spawining $srvrcmd")
+srvrproc = spawn(srvrcmd)
 
-@spawnat 2 include("srvr.jl")
 include("clnt.jl")
+println("stopping server process")
+kill(srvrproc)
+
+addprocs(1)
+@spawnat 2 include("srvrfn.jl")
 
 tic()
 for idx in 1:NCALLS
@@ -10,3 +17,4 @@ for idx in 1:NCALLS
 end
 t = toc()
 println("time for $NCALLS calls with remotecall_fetch: $t secs @ $(t/NCALLS) per call")
+

@@ -13,10 +13,11 @@ Assume a file `srvr.jl` that contains the definition of the following code
 ```julia
 #load package
 using JuliaWebAPI
+using Compat
 
 #define function testfn1
 function testfn1(arg1, arg2; narg1=1, narg2=2)
-    return (int(arg1) * int(narg1)) + (int(arg2) * int(narg2))
+    return (parse(Int, arg1) * parse(Int, narg1)) + (parse(Int, arg2) * parse(Int, narg2))
 end
 
 #define function testfn2
@@ -26,16 +27,14 @@ testfn2(arg1, arg2; narg1=1, narg2=2) = testfn1(arg1, arg2; narg1=narg1, narg2=n
 process([(testfn1, true), (testfn2, false)], "tcp://127.0.0.1:9999"; bind=true)
 ```
 
+Start the server process in the background. This process will run the ZMQ listener.
+````
+julia srvr.jl &
+````
+
 Then, in a Julia REPL, run the following code
 ```julia
 julia> using JuliaWebAPI   #Load package
-
-julia> addprocs(1)    #Create a second process. This process will run the ZMQ listener
-1-element Array{Any,1}:
- 2
- 
-julia> @spawnat 2  include("srvr.jl")  #Load file in process 2. Starts the ZMQ listener
-RemoteRef(2,1,18)
 
 #Create the ZMQ client that talks to the ZMQ listener above
 julia> const apiclnt = APIInvoker("tcp://127.0.0.1:9999")
@@ -48,5 +47,5 @@ julia> run_rest(apiclnt, 8888)         #Starts the HTTP server in current proces
 Then, in your browser, navigate to `http://localhost:8888/testfn1/4/5?narg1=6&narg2=4`
 
 This will return the following JSON response to your browser, which is the result of running the `testfn1` function defined above:
-`["data"=>44,"code"=>0]`
+`{"data"=>44,"code"=>0}`
 
