@@ -96,6 +96,7 @@ function process(conn::APIResponder)
         if startswith(cmd, ':')    # is a control command
             ctrlcmd = symbol(cmd[2:end])
             if ctrlcmd === :terminate
+                respond(conn, Nullable{APISpec}(), :terminate, "")
                 break
             else
                 err("invalid control command $cmd")
