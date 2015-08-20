@@ -14,6 +14,7 @@ const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, "
                         :invalid_api        => [404, -1, "invalid api"],
                         :api_exception      => [500, -2, "api exception"],
                         :invalid_data       => [500, -3, "invalid data"],
+                        :terminate          => [200, 0,  ""],
                         :dummy              => []
                     )
 
