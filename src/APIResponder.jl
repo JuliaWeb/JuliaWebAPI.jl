@@ -8,10 +8,12 @@ type APIResponder
     ctx::Context
     sock::Socket
     endpoints::Dict{AbstractString, APISpec}
+    nid::AbstractString
 
-    function APIResponder(addr::AbstractString, ctx::Context=Context(), bind::Bool=true)
+    function APIResponder(addr::AbstractString, ctx::Context=Context(), bind::Bool=true, nid::AbstractString="")
         a = new()
         a.ctx = ctx
+        a.nid = nid
         a.sock = Socket(ctx, REP)
         a.endpoints = Dict{AbstractString, APISpec}()
         if bind
@@ -36,12 +38,17 @@ end
 
 function respond(conn::APIResponder, code::Int, headers::Dict, resp::Any)
     msg = Dict{AbstractString,Any}()
-    msg["code"] = code
+
+    isempty(conn.nid) || (msg["nid"] = conn.nid)
+
     if !isempty(headers)
         msg["hdrs"] = headers
         Logging.debug("sending headers [$headers]")
     end
+
+    msg["code"] = code
     msg["data"] = resp
+
     msgstr = JSON.json(msg)
     Logging.debug("sending response [$msgstr]")
     ZMQ.send(conn.sock, Message(msgstr))
@@ -55,6 +62,7 @@ function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symb
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
     catch ex
+        Logging.error("api_exception: $ex")
         respond(conn, Nullable(api), :api_exception)
     end
 end
@@ -110,12 +118,12 @@ function process(conn::APIResponder)
     Logging.info("stopped processing.")
 end
 
-function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false)
+function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
     api_name = get(ENV,"JBAPI_NAME", "noname")
     logfile = "apisrvr_$(api_name).log"
     Logging.configure(level=log_level, filename=logfile)
     Logging.debug("queue is at $addr")
-    api = APIResponder(addr, Context(), bind)
+    api = APIResponder(addr, Context(), bind, nid)
 
     for spec in apispecs
         fn = spec[1]
@@ -134,6 +142,7 @@ function process()
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
     Logging.info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))
+    Logging.info("JBAPI_CID=" * get(ENV,"JBAPI_CID",""))
 
     cmd = get(ENV,"JBAPI_CMD","")
     eval(parse(cmd))
