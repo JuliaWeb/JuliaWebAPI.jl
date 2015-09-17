@@ -17,8 +17,9 @@ function isvalidcmd(cmd::AbstractString)
 end
 
 function rest_handler(api::APIInvoker, req::Request, res::Response)
-    Logging.debug("processing request $req")
-
+    Logging.info("processing request $req")
+    println("rest_handler called .... $(req.data)")
+    
     try
         comps = @compat split(req.resource, '?', limit=2, keep=false)
         if isempty(comps)
@@ -27,7 +28,29 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             path = shift!(comps)
             query = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
             args = @compat split(path, '/', keep=false)
-            data_dict = isempty(req.data) ? query : merge(query, parsequerystring(req.data))
+            ## Handling for POST data
+            if( typeof(req.data) == Array{Uint8, 1} )
+                if( sizeof(req.data) > 0 )
+                    idx  = findfirst(req.data, '\0')
+                    actual_data = bytestring(req.data[1:(idx == 0 ? endof(req.data) : idx-1)])
+                else
+                    actual_data = ""
+                end
+            else
+                actual_data = req.data
+            end
+            println("actual_data is :::: $actual_data")
+            Logging.info("actual_data is :::: $actual_data")
+
+            data_dict = null
+            if( contains(actual_data, "=") )
+                ## Logging.debug("parsequerystring is :::: $(parsequerystring(actual_data))")
+                data_dict = isempty(actual_data) ? query : merge(query, parsequerystring(actual_data))
+            else
+                data_dict = Dict{String,String}()
+            end
+            println("The data_dict is ::: $data_dict")
+            Logging.info("The data_dict is ::: $data_dict")
 
             if isempty(args) || !isvalidcmd(args[1])
                 res = Response(404)
