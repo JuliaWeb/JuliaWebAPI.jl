@@ -18,7 +18,8 @@ end
 
 function rest_handler(api::APIInvoker, req::Request, res::Response)
     Logging.info("processing request $req")
-
+    println("rest_handler called .... $(req.data)")
+    
     try
         comps = @compat split(req.resource, '?', limit=2, keep=false)
         if isempty(comps)
@@ -38,6 +39,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             else
                 actual_data = req.data
             end
+            println("actual_data is :::: $actual_data")
             Logging.info("actual_data is :::: $actual_data")
 
             data_dict = null
@@ -47,6 +49,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             else
                 data_dict = Dict{String,String}()
             end
+            println("The data_dict is ::: $data_dict")
             Logging.info("The data_dict is ::: $data_dict")
 
             if isempty(args) || !isvalidcmd(args[1])
