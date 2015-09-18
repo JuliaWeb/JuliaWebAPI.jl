@@ -17,7 +17,7 @@ function isvalidcmd(cmd::AbstractString)
 end
 
 function rest_handler(api::APIInvoker, req::Request, res::Response)
-    Logging.info("processing request $req")
+    Logging.error("processing request $req")
     println("rest_handler called .... $(req.data)")
     
     try
@@ -40,7 +40,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
                 actual_data = req.data
             end
             println("actual_data is :::: $actual_data")
-            Logging.info("actual_data is :::: $actual_data")
+            Logging.error("actual_data is :::: $actual_data")
 
             data_dict = null
             if( contains(actual_data, "=") )
@@ -50,7 +50,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
                 data_dict = Dict{String,String}()
             end
             println("The data_dict is ::: $data_dict")
-            Logging.info("The data_dict is ::: $data_dict")
+            Logging.error("The data_dict is ::: $data_dict")
 
             if isempty(args) || !isvalidcmd(args[1])
                 res = Response(404)
