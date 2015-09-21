@@ -109,6 +109,8 @@ function process(conn::APIResponder)
             continue
         end
 
+        Logging.info("The message is :::: $msg")
+        
         try
             call_api(conn.endpoints[cmd], conn, args(msg), data(msg))
         catch e
