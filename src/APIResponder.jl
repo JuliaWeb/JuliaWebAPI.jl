@@ -85,7 +85,11 @@ args(msg::Dict) = get(msg, "args", [])
 data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
 
 # start processing as a server
-function process(conn::APIResponder)
+function process(conn::APIResponder; log_level=INFO)
+    api_name = get(ENV,"JBAPI_NAME", "noname")
+    logfile = "apisrvr_$(api_name).log"
+    Logging.configure(level=log_level, filename=logfile)
+    
     Logging.info("processing...")
     while true
         msg = JSON.parse(bytestring(ZMQ.recv(conn.sock)))
