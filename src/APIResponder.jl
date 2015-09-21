@@ -59,7 +59,9 @@ respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp::Any=no
 
 function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symbol,Any})
     try
+        Logging.info("Calling api.fn()")
         result = api.fn(args...; data...)
+        Logging.info("The result is $result")
         respond(conn, Nullable(api), :success, result)
     catch ex
         Logging.error("api_exception: $ex")
