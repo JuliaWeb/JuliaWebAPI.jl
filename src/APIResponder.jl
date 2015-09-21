@@ -86,12 +86,12 @@ data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()
 
 # start processing as a server
 function process(conn::APIResponder)
-    Logging.debug("processing...")
+    Logging.info("processing...")
     while true
         msg = JSON.parse(bytestring(ZMQ.recv(conn.sock)))
 
         cmd = get(msg, "cmd", "")
-        Logging.debug("received request [$cmd]")
+        Logging.info("received request [$cmd]")
 
         if startswith(cmd, ':')    # is a control command
             ctrlcmd = symbol(cmd[2:end])
