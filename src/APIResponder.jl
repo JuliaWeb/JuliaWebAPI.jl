@@ -95,7 +95,7 @@ function process(conn::APIResponder; log_level=INFO)
         msg = JSON.parse(bytestring(ZMQ.recv(conn.sock)))
 
         cmd = get(msg, "cmd", "")
-        Logging.debug("received request [$cmd]")
+        Logging.info("received request [$cmd]")
 
         if startswith(cmd, ':')    # is a control command
             ctrlcmd = symbol(cmd[2:end])
@@ -113,9 +113,9 @@ function process(conn::APIResponder; log_level=INFO)
             continue
         end
 
-        Logging.debug("The message is :::: $msg")
-        Logging.debug("args is :::: $(args(msg))")
-        Logging.debug("data is :::: $(data(msg))")
+        Logging.info("The message is :::: $msg")
+        Logging.info("args is :::: $(args(msg))")
+        Logging.info("data is :::: $(data(msg))")
         
         try
             call_api(conn.endpoints[cmd], conn, args(msg), data(msg))
