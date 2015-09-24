@@ -90,7 +90,7 @@ data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()
 function process(conn::APIResponder; log_level=INFO)
     api_name = get(ENV,"JBAPI_NAME", "noname")
     cid = get(ENV,"JBAPI_CID","1")
-    logfile = "/home/juser/logs/apisrvr_$(api_name)_$(cid).log"
+    logfile = "apisrvr_$(api_name)_$(cid).log"
     Logging.configure(level=log_level, filename=logfile)
     
     Logging.debug("processing...")
@@ -133,7 +133,7 @@ end
 function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
     api_name = get(ENV,"JBAPI_NAME", "noname")
     cid = get(ENV,"JBAPI_CID","1")
-    logfile = "/home/juser/logs/apisrvr_$(api_name)_$(cid).log"
+    logfile = "apisrvr_$(api_name)_$(cid).log"
     Logging.configure(level=log_level, filename=logfile)
     Logging.debug("queue is at $addr")
     api = APIResponder(addr, Context(), bind, nid)
@@ -150,7 +150,11 @@ function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE","")
 end
 
 function process()
-    Logging.configure(level=INFO, filename="/home/juser/logs/apisrvr_$(get(ENV,"JBAPI_CID","")).log")
+    api_name = get(ENV,"JBAPI_NAME", "noname")
+    cid = get(ENV,"JBAPI_CID","1")
+    logfile = "apisrvr_$(api_name)_$(cid).log"
+    Logging.configure(level=log_level, filename=logfile)
+    
     Logging.info("Reading api server configuration from environment...")
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
