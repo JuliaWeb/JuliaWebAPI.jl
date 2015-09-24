@@ -59,7 +59,9 @@ respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp::Any=no
 
 function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symbol,Any})
     try
+        Logging.info("Calling api.fn()")
         result = api.fn(args...; data...)
+        Logging.info("The result is $result")
         respond(conn, Nullable(api), :success, result)
     catch ex
         Logging.error("api_exception: $ex")
@@ -85,13 +87,18 @@ args(msg::Dict) = get(msg, "args", [])
 data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
 
 # start processing as a server
-function process(conn::APIResponder)
+function process(conn::APIResponder; log_level=INFO)
+    api_name = get(ENV,"JBAPI_NAME", "noname")
+    cid = get(ENV,"JBAPI_CID","1")
+    logfile = "apisrvr_$(api_name)_$(cid).log"
+    Logging.configure(level=log_level, filename=logfile)
+    
     Logging.debug("processing...")
     while true
         msg = JSON.parse(bytestring(ZMQ.recv(conn.sock)))
 
         cmd = get(msg, "cmd", "")
-        Logging.debug("received request [$cmd]")
+        Logging.info("received request [$cmd]")
 
         if startswith(cmd, ':')    # is a control command
             ctrlcmd = symbol(cmd[2:end])
@@ -109,6 +116,10 @@ function process(conn::APIResponder)
             continue
         end
 
+        Logging.info("The message is :::: $msg")
+        Logging.info("args is :::: $(args(msg))")
+        Logging.info("data is :::: $(data(msg))")
+        
         try
             call_api(conn.endpoints[cmd], conn, args(msg), data(msg))
         catch e
@@ -121,7 +132,8 @@ end
 
 function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
     api_name = get(ENV,"JBAPI_NAME", "noname")
-    logfile = "apisrvr_$(api_name).log"
+    cid = get(ENV,"JBAPI_CID","1")
+    logfile = "apisrvr_$(api_name)_$(cid).log"
     Logging.configure(level=log_level, filename=logfile)
     Logging.debug("queue is at $addr")
     api = APIResponder(addr, Context(), bind, nid)
@@ -138,7 +150,11 @@ function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE","")
 end
 
 function process()
-    Logging.configure(level=INFO, filename="apisrvr.log")
+    api_name = get(ENV,"JBAPI_NAME", "noname")
+    cid = get(ENV,"JBAPI_CID","1")
+    logfile = "apisrvr_$(api_name)_$(cid).log"
+    Logging.configure(level=log_level, filename=logfile)
+    
     Logging.info("Reading api server configuration from environment...")
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
