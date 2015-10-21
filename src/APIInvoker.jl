@@ -47,7 +47,7 @@ function httpresponse(resp::Dict)
         end
     end
     data = get(resp, "data", "")
-    respdata = isa(data, Array) ? convert(Array{Uint8}, data) :
+    respdata = isa(data, Array) ? convert(Array{UInt8}, data) :
                isa(data, Dict) ? JSON.json(data) :
                string(data)
     Response(resp["code"], hdrs, respdata)

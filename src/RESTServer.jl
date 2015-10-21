@@ -16,9 +16,24 @@ function isvalidcmd(cmd::AbstractString)
     true
 end
 
+function parsepostdata(req, query)
+    post_data = ""
+    if isa(req.data, Vector{UInt8})
+        if !isempty(req.data)
+            idx = findfirs(req.data, '\0')
+            idx = (idx == 0) ? endof(req.data) : (idx - 1)
+            post_data = bytestring(req.data[1:idx])
+        end
+    elseif isa(req.data, AbstractString)
+        post_data = req.data
+    end
+    
+    contains(post_data, '=') || (return query)
+    merge(query, parsequerystring(post_data))
+end
+
 function rest_handler(api::APIInvoker, req::Request, res::Response)
     Logging.info("processing request $req")
-    println("rest_handler called .... $(req.data)")
     
     try
         comps = @compat split(req.resource, '?', limit=2, keep=false)
@@ -26,31 +41,9 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             res = Response(404)
         else
             path = shift!(comps)
-            query = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
+            data_dict = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
+            data_dict = parsepostdata(req, data_dict)
             args = @compat split(path, '/', keep=false)
-            ## Handling for POST data
-            if( typeof(req.data) == Array{Uint8, 1} )
-                if( sizeof(req.data) > 0 )
-                    idx  = findfirst(req.data, '\0')
-                    actual_data = bytestring(req.data[1:(idx == 0 ? endof(req.data) : idx-1)])
-                else
-                    actual_data = ""
-                end
-            else
-                actual_data = req.data
-            end
-            println("actual_data is :::: $actual_data")
-            Logging.info("actual_data is :::: $actual_data")
-
-            data_dict = null
-            if( contains(actual_data, "=") )
-                ## Logging.debug("parsequerystring is :::: $(parsequerystring(actual_data))")
-                data_dict = isempty(actual_data) ? query : merge(query, parsequerystring(actual_data))
-            else
-                data_dict = Dict{String,String}()
-            end
-            println("The data_dict is ::: $data_dict")
-            Logging.info("The data_dict is ::: $data_dict")
 
             if isempty(args) || !isvalidcmd(args[1])
                 res = Response(404)
