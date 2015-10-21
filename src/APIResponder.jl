@@ -91,7 +91,7 @@ function process(conn::APIResponder)
         msg = JSON.parse(bytestring(ZMQ.recv(conn.sock)))
 
         cmd = get(msg, "cmd", "")
-        Logging.debug("received request [$cmd]")
+        Logging.info("received request [$cmd]")
 
         if startswith(cmd, ':')    # is a control command
             ctrlcmd = symbol(cmd[2:end])
@@ -108,7 +108,7 @@ function process(conn::APIResponder)
             respond(conn, Nullable{APISpec}(), :invalid_api)
             continue
         end
-
+        
         try
             call_api(conn.endpoints[cmd], conn, args(msg), data(msg))
         catch e
@@ -119,10 +119,14 @@ function process(conn::APIResponder)
     Logging.info("stopped processing.")
 end
 
-function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
+function setup_logging(;log_level=INFO, nid::AbstractString=get(ENV,"JBAPI_CID",""))
     api_name = get(ENV,"JBAPI_NAME", "noname")
-    logfile = "apisrvr_$(api_name).log"
+    logfile = "apisrvr_$(api_name)_$(nid).log"
     Logging.configure(level=log_level, filename=logfile)
+end
+
+function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
+    setup_logging()
     Logging.debug("queue is at $addr")
     api = APIResponder(addr, Context(), bind, nid)
 
@@ -138,7 +142,8 @@ function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE","")
 end
 
 function process()
-    Logging.configure(level=INFO, filename="apisrvr.log")
+    setup_logging()
+    
     Logging.info("Reading api server configuration from environment...")
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))

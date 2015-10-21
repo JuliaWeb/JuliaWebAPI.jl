@@ -16,18 +16,34 @@ function isvalidcmd(cmd::AbstractString)
     true
 end
 
-function rest_handler(api::APIInvoker, req::Request, res::Response)
-    Logging.debug("processing request $req")
+function parsepostdata(req, query)
+    post_data = ""
+    if isa(req.data, Vector{UInt8})
+        if !isempty(req.data)
+            idx = findfirs(req.data, '\0')
+            idx = (idx == 0) ? endof(req.data) : (idx - 1)
+            post_data = bytestring(req.data[1:idx])
+        end
+    elseif isa(req.data, AbstractString)
+        post_data = req.data
+    end
+    
+    contains(post_data, '=') || (return query)
+    merge(query, parsequerystring(post_data))
+end
 
+function rest_handler(api::APIInvoker, req::Request, res::Response)
+    Logging.info("processing request $req")
+    
     try
         comps = @compat split(req.resource, '?', limit=2, keep=false)
         if isempty(comps)
             res = Response(404)
         else
             path = shift!(comps)
-            query = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
+            data_dict = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
+            data_dict = parsepostdata(req, data_dict)
             args = @compat split(path, '/', keep=false)
-            data_dict = isempty(req.data) ? query : merge(query, parsequerystring(req.data))
 
             if isempty(args) || !isvalidcmd(args[1])
                 res = Response(404)
