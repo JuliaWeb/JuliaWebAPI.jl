@@ -1,3 +1,8 @@
+using JuliaWebAPI
+using Logging
+using Base.Test
+using Compat
+
 srvrscript = joinpath(dirname(@__FILE__), "srvr.jl")
 srvrcmd = `$(joinpath(JULIA_HOME, "julia")) $(srvrscript)`
 println("spawining $srvrcmd")
