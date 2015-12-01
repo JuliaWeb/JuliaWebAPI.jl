@@ -1,10 +1,13 @@
 using JuliaWebAPI
 using Logging
+using ZMQ
 using Base.Test
 
 Logging.configure(level=INFO)
 
-const apiclnt = APIInvoker("tcp://127.0.0.1:9999")
+const ctx = Context()
+
+const apiclnt = APIInvoker("tcp://127.0.0.1:9999", ctx)
 
 const NCALLS = 100
 
@@ -53,3 +56,5 @@ for idx in 1:100
 end
 t = toc();
 println("time for $NCALLS calls to testbinary: $t secs @ $(t/NCALLS) per call")
+
+close(ctx)
