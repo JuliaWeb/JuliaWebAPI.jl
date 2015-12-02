@@ -1,17 +1,16 @@
-language: cpp
-compiler:
-  - clang
+language: julia
+os:
+    - osx
+    - linux
+julia:
+    - nightly
+    - 0.4
+    - 0.3
 notifications:
-  email: false
-env:
-  matrix:
-    - JULIAVERSION="juliareleases"
-    - JULIAVERSION="julianightlies"
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-  - sudo apt-get update -qq -y
-  - sudo apt-get install libpcre3-dev julia -y
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    email: false
 script:
-  - julia -e 'versioninfo(); Pkg.init(); Pkg.clone(pwd()); Pkg.test("JuliaWebAPI")'
+    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    - julia -e 'Pkg.clone(pwd()); Pkg.build("JuliaWebAPI"); Pkg.test("JuliaWebAPI"; coverage=true)';
+after_success:
+  - julia -e 'cd(Pkg.dir("JuliaWebAPI")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())';
+#  - julia -e 'cd(Pkg.dir("JuliaWebAPI")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())';

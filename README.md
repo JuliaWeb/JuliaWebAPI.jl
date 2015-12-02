@@ -1,6 +1,6 @@
 # JuliaWebAPI.jl
 
-[![Build Status](https://travis-ci.org/tanmaykm/JuliaWebAPI.jl.png)](https://travis-ci.org/tanmaykm/JuliaWebAPI.jl)
+[![Build Status](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl.png)](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl)
 
 Facilitates wrapping Julia functions into a remote callable API via ZMQ and HTTP.
 Combined with [JuliaBox](https://juliabox.org/), it helps deploy Julia packages and code snippets as publicly hosted, auto-scaling REST APIs.

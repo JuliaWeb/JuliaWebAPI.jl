@@ -22,4 +22,5 @@ for idx in 1:NCALLS
 end
 t = toc()
 println("time for $NCALLS calls with remotecall_fetch: $t secs @ $(t/NCALLS) per call")
-
+rmprocs(workers())
+println("stopped all workers")
