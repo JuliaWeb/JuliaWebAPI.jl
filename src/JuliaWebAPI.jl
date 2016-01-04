@@ -7,7 +7,7 @@ using HttpCommon
 using HttpServer
 using Compat
 
-export APIResponder, register, process
+export APIResponder, register, process, process_async
 export APIInvoker, apicall, httpresponse, fnresponse, run_rest
 
 const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, ""],
