@@ -122,8 +122,8 @@ function process(conn::APIResponder)
             respond(conn, Nullable(conn.endpoints[cmd]), :invalid_data)
         end
     end
-    close(api.sock)
-    close(api.ctx)
+    close(conn.sock)
+    #close(conn.ctx)
     Logging.info("stopped processing.")
 end
 
@@ -153,7 +153,7 @@ function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEU
     return api
 end
 
-function create_responder(apispecs::Array{Tuple, 1}, addr, bind, nid)
+function create_responder(apispecs::Array, addr, bind, nid)
     api = APIResponder(addr, Context(), bind, nid)
     for spec in apispecs
       fn = spec[1]
