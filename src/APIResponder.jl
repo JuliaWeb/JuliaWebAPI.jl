@@ -26,14 +26,20 @@ type APIResponder
     APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
 end
 
+function Base.show(io::IO, x::APIResponder)
+    println(io, "JuliaWebAPI.APIResponder with endpoints:")
+    Base.show_comma_array(STDOUT, keys(x.endpoints), "","")
+end
+
 # register a function as API call
 # TODO: validate method belongs to module?
-function register(conn::APIResponder, f::Function; 
-                  resp_json::Bool=false, 
+function register(conn::APIResponder, f::Function;
+                  resp_json::Bool=false,
                   resp_headers::Dict=Dict{AbstractString,AbstractString}())
     endpt = string(f)
     Logging.debug("registering endpoint [$endpt]")
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
+    return conn #make fluent api possible
 end
 
 function respond(conn::APIResponder, code::Int, headers::Dict, resp::Any)
@@ -108,7 +114,7 @@ function process(conn::APIResponder)
             respond(conn, Nullable{APISpec}(), :invalid_api)
             continue
         end
-        
+
         try
             call_api(conn.endpoints[cmd], conn, args(msg), data(msg))
         catch e
@@ -116,7 +122,10 @@ function process(conn::APIResponder)
             respond(conn, Nullable(conn.endpoints[cmd]), :invalid_data)
         end
     end
+    close(conn.sock)
+    #close(conn.ctx)
     Logging.info("stopped processing.")
+    conn
 end
 
 function setup_logging(;log_level=INFO, nid::AbstractString=get(ENV,"JBAPI_CID",""))
@@ -125,25 +134,45 @@ function setup_logging(;log_level=INFO, nid::AbstractString=get(ENV,"JBAPI_CID",
     Logging.configure(level=log_level, filename=logfile)
 end
 
-function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
+function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
+    process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, async=true)
+end
+
+function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
     setup_logging()
     Logging.debug("queue is at $addr")
-    api = APIResponder(addr, Context(), bind, nid)
+    api = create_responder(apispecs, addr, bind, nid)
 
-    for spec in apispecs
-        fn = spec[1]
-        resp_json = (length(spec) > 1) ? spec[2] : false
-        resp_headers = (length(spec) > 2) ? spec[3] : Dict{AbstractString,AbstractString}()
-        register(api, fn, resp_json=resp_json, resp_headers=resp_headers)
+    if async
+        Logging.debug("processing async...")
+        @async process(api)
+    else
+        Logging.debug("processing...")
+        process(api)
     end
+    api
+end
 
-    Logging.debug("processing...")
-    process(api)
+_add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{AbstractString,AbstractString}())
+
+function _add_spec(spec::Tuple, api::APIResponder)
+    fn = spec[1]
+    resp_json = (length(spec) > 1) ? spec[2] : false
+    resp_headers = (length(spec) > 2) ? spec[3] : Dict{AbstractString,AbstractString}()
+    register(api, fn, resp_json=resp_json, resp_headers=resp_headers)
+end
+
+function create_responder(apispecs::Array, addr, bind, nid)
+    api = APIResponder(addr, Context(), bind, nid)
+    for spec in apispecs
+        _add_spec(spec, api)
+    end
+    api
 end
 
 function process()
     setup_logging()
-    
+
     Logging.info("Reading api server configuration from environment...")
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
@@ -152,5 +181,5 @@ function process()
 
     cmd = get(ENV,"JBAPI_CMD","")
     eval(parse(cmd))
+    nothing
 end
-
