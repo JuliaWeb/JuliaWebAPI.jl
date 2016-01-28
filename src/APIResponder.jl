@@ -76,17 +76,17 @@ function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symb
     end
 end
 
-doc"""
-    narrow_args! if a private function that processes an Array transferred
-    over JSON to a properly typed and dimensioned Julia array. Arrays
-    serialised from JSON are stored as an Array{Any}, even if all the elements
-    are members of the same concrete type, eg, Float64. This function will
-    transform such an array to an Array{Float64} type.
 
-    Further, since JSON does not have true multidimensional arrays, they are
-    transmitted as arrays containing arrays. This function will convert them to
-    a true multidimensional array in Julia.
-"""
+###
+#    over JSON to a properly typed and dimensioned Julia array. Arrays
+#    serialised from JSON are stored as an Array{Any}, even if all the elements
+#    are members of the same concrete type, eg, Float64. This function will
+#    transform such an array to an Array{Float64} type.
+#
+#    Further, since JSON does not have true multidimensional arrays, they are
+#    transmitted as arrays containing arrays. This function will convert them to
+#    a true multidimensional array in Julia.
+###
 function narrow_args!(x)
     for (i, v) in enumerate(x)
         if (typeof(v) <: AbstractArray)
