@@ -65,11 +65,36 @@ respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp::Any=no
 
 function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symbol,Any})
     try
+        if !applicable(api.fn, args...)
+            narrow_args!(args)
+        end
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
     catch ex
         Logging.error("api_exception: $ex")
         respond(conn, Nullable(api), :api_exception)
+    end
+end
+
+
+###
+#    over JSON to a properly typed and dimensioned Julia array. Arrays
+#    serialised from JSON are stored as an Array{Any}, even if all the elements
+#    are members of the same concrete type, eg, Float64. This function will
+#    transform such an array to an Array{Float64} type.
+#
+#    Further, since JSON does not have true multidimensional arrays, they are
+#    transmitted as arrays containing arrays. This function will convert them to
+#    a true multidimensional array in Julia.
+###
+function narrow_args!(x)
+    for (i, v) in enumerate(x)
+        if (typeof(v) <: AbstractArray)
+            if (length(v) > 0 && typeof(v[1]) <: Array)
+                x[i] = hcat(x[i]...)'
+            end
+            x[i] = Base.map_promote(identity, x[i])
+        end
     end
 end
 

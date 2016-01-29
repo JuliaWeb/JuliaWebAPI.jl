@@ -57,4 +57,9 @@ end
 t = toc();
 println("time for $NCALLS calls to testbinary: $t secs @ $(t/NCALLS) per call")
 
+#Test Array invocation
+
+resp = apicall(apiclnt, "testArray", Float64[1.0 2.0; 3.0 4.0])
+@test fnresponse(resp) == 10
+
 close(ctx)

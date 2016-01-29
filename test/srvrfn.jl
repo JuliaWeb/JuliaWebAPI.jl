@@ -11,3 +11,5 @@ testfn2(arg1, arg2; narg1=1, narg2=2) = testfn1(arg1, arg2; narg1=narg1, narg2=n
 
 testbinary(datalen::AbstractString) = testbinary(@compat(parse(Int,datalen)))
 testbinary(datalen::Int) = rand(UInt8, datalen)
+
+testArray(x::Array{Float64, 2}) = sum(x)
