@@ -28,7 +28,7 @@ function parsepostdata(req, query)
         post_data = req.data
     end
     
-    contains(post_data, '=') || (return query)
+    ('=' in post_data) || (return query)
     merge(query, parsequerystring(post_data))
 end
 
@@ -61,14 +61,14 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
         end
     catch e
         res = Response(500)
-        Base.error_show(STDERR, e, catch_backtrace())
+        Base.showerror(STDERR, e, catch_backtrace())
         err("Exception in handler: $e")
     end
     Logging.debug("\tresponse $res")
     return res
 end
 
-on_error(client, err) = err("HTTP error: $err")
+on_error(client, e) = err("HTTP error: $e")
 on_listen(port) = Logging.info("listening on port $(port)...")
 
 type RESTServer
