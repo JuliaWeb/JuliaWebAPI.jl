@@ -91,7 +91,7 @@ function narrow_args!(x)
     for (i, v) in enumerate(x)
         if (typeof(v) <: AbstractArray)
             if (length(v) > 0 && typeof(v[1]) <: Array)
-                x[i] = hcat(x[i]...)'
+                x[i] = hcat(x[i]...)
             end
             x[i] = Base.map_promote(identity, x[i])
         end
