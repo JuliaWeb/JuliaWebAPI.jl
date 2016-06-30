@@ -170,7 +170,7 @@ function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEU
 end
 
 function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
-    setup_logging()
+    setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
     api = create_responder(apispecs, addr, bind, nid)
 
