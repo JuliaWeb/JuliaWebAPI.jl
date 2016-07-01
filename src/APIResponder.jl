@@ -87,13 +87,19 @@ end
 #    transmitted as arrays containing arrays. This function will convert them to
 #    a true multidimensional array in Julia.
 ###
+if VERSION < v"0.5.0-"
+    promote_arr(x) = Base.map_promote(identity, x)
+else
+    promote_arr(x) = Base.collect_to!(similar(x, typeof(x[1])), x, 1, 1)
+end
+
 function narrow_args!(x)
     for (i, v) in enumerate(x)
         if (typeof(v) <: AbstractArray)
             if (length(v) > 0 && typeof(v[1]) <: Array)
                 x[i] = hcat(x[i]...)
             end
-            x[i] = Base.map_promote(identity, x[i])
+            x[i] = promote_arr(x[i])
         end
     end
 end
@@ -164,7 +170,7 @@ function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEU
 end
 
 function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
-    setup_logging()
+    setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
     api = create_responder(apispecs, addr, bind, nid)
 

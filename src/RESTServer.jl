@@ -22,7 +22,7 @@ function parsepostdata(req, query)
         if !isempty(req.data)
             idx = findfirs(req.data, '\0')
             idx = (idx == 0) ? endof(req.data) : (idx - 1)
-            post_data = bytestring(req.data[1:idx])
+            post_data = byt2str(req.data[1:idx])
         end
     elseif isa(req.data, AbstractString)
         post_data = req.data
