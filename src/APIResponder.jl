@@ -87,7 +87,7 @@ end
 #    transmitted as arrays containing arrays. This function will convert them to
 #    a true multidimensional array in Julia.
 ###
-if VERSION < v"0.5.0-"
+if VERSION < v"0.5.0-dev+3294"
     promote_arr(x) = Base.map_promote(identity, x)
 else
     promote_arr(x) = Base.collect_to!(similar(x, typeof(x[1])), x, 1, 1)
