@@ -31,12 +31,20 @@ function Base.show(io::IO, x::APIResponder)
     Base.show_comma_array(STDOUT, keys(x.endpoints), "","")
 end
 
+function default_endpoint(f::Function)
+    endpt = string(f)
+    # separate the module (more natural URL, assumes 'using Module')
+    if '.' in endpt
+        endpt = rsplit(endpt, '.', limit=2)[2]
+    end
+    endpt
+end
+
 # register a function as API call
 # TODO: validate method belongs to module?
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
-                  resp_headers::Dict=Dict{AbstractString,AbstractString}())
-    endpt = string(f)
+                  resp_headers::Dict=Dict{AbstractString,AbstractString}(), endpt=default_endpoint(f))
     Logging.debug("registering endpoint [$endpt]")
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn #make fluent api possible
@@ -191,7 +199,8 @@ function _add_spec(spec::Tuple, api::APIResponder)
     fn = spec[1]
     resp_json = (length(spec) > 1) ? spec[2] : false
     resp_headers = (length(spec) > 2) ? spec[3] : Dict{AbstractString,AbstractString}()
-    register(api, fn, resp_json=resp_json, resp_headers=resp_headers)
+    api_name = (length(spec) > 3) ? spec[4] : default_endpoint(fn)
+    register(api, fn, resp_json=resp_json, resp_headers=resp_headers, endpt=api_name)
 end
 
 function create_responder(apispecs::Array, addr, bind, nid)
