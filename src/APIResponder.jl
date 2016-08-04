@@ -169,7 +169,8 @@ function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEU
     process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, async=true)
 end
 
-function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
+function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(@compat(parse(Int32,get(ENV, "JBAPI_LOGLEVEL", "1")))),
+                bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
     api = create_responder(apispecs, addr, bind, nid)
@@ -202,13 +203,15 @@ function create_responder(apispecs::Array, addr, bind, nid)
 end
 
 function process()
-    setup_logging()
+    log_level = Logging.LogLevel(@compat(parse(Int32,get(ENV, "JBAPI_LOGLEVEL", "1"))))
+    setup_logging(;log_level=log_level)
 
     Logging.info("Reading api server configuration from environment...")
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
     Logging.info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))
     Logging.info("JBAPI_CID=" * get(ENV,"JBAPI_CID",""))
+    Logging.info("JBAPI_LOGLEVEL=" * get(ENV,"JBAPI_LOGLEVEL","") * " as " * string(log_level))
 
     cmd = get(ENV,"JBAPI_CMD","")
     eval(parse(cmd))
