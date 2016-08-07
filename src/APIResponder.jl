@@ -31,12 +31,20 @@ function Base.show(io::IO, x::APIResponder)
     Base.show_comma_array(STDOUT, keys(x.endpoints), "","")
 end
 
+function default_endpoint(f::Function)
+    endpt = string(f)
+    # separate the module (more natural URL, assumes 'using Module')
+    if '.' in endpt
+        endpt = rsplit(endpt, '.', limit=2)[2]
+    end
+    endpt
+end
+
 # register a function as API call
 # TODO: validate method belongs to module?
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
-                  resp_headers::Dict=Dict{AbstractString,AbstractString}())
-    endpt = string(f)
+                  resp_headers::Dict=Dict{AbstractString,AbstractString}(), endpt=default_endpoint(f))
     Logging.debug("registering endpoint [$endpt]")
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn #make fluent api possible
@@ -169,7 +177,8 @@ function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEU
     process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, async=true)
 end
 
-function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
+function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(@compat(parse(Int32,get(ENV, "JBAPI_LOGLEVEL", "1")))),
+                bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
     api = create_responder(apispecs, addr, bind, nid)
@@ -190,7 +199,8 @@ function _add_spec(spec::Tuple, api::APIResponder)
     fn = spec[1]
     resp_json = (length(spec) > 1) ? spec[2] : false
     resp_headers = (length(spec) > 2) ? spec[3] : Dict{AbstractString,AbstractString}()
-    register(api, fn, resp_json=resp_json, resp_headers=resp_headers)
+    api_name = (length(spec) > 3) ? spec[4] : default_endpoint(fn)
+    register(api, fn, resp_json=resp_json, resp_headers=resp_headers, endpt=api_name)
 end
 
 function create_responder(apispecs::Array, addr, bind, nid)
@@ -202,13 +212,15 @@ function create_responder(apispecs::Array, addr, bind, nid)
 end
 
 function process()
-    setup_logging()
+    log_level = Logging.LogLevel(@compat(parse(Int32,get(ENV, "JBAPI_LOGLEVEL", "1"))))
+    setup_logging(;log_level=log_level)
 
     Logging.info("Reading api server configuration from environment...")
     Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
     Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
     Logging.info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))
     Logging.info("JBAPI_CID=" * get(ENV,"JBAPI_CID",""))
+    Logging.info("JBAPI_LOGLEVEL=" * get(ENV,"JBAPI_LOGLEVEL","") * " as " * string(log_level))
 
     cmd = get(ENV,"JBAPI_CMD","")
     eval(parse(cmd))
