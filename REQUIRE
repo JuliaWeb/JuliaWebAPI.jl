@@ -4,4 +4,4 @@ JSON
 Logging
 HttpCommon
 HttpServer
-Compat
+Compat 0.8.0
