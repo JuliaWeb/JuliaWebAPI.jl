@@ -33,7 +33,7 @@ function apicall(conn::APIInvoker, cmd::AbstractString, args...; data...)
     Logging.debug("sending request: $msgstr")
     ZMQ.send(conn.sock, Message(JSON.json(req)))
 
-    respstr = bytestring(ZMQ.recv(conn.sock))
+    respstr = unsafe_string(ZMQ.recv(conn.sock))
     Logging.debug("received response $respstr")
     JSON.parse(respstr)
 end
