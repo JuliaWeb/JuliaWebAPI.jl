@@ -133,7 +133,7 @@ data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()
 function process(conn::APIResponder)
     Logging.debug("processing...")
     while true
-        msg = JSON.parse(bytestring(ZMQ.recv(conn.sock)))
+        msg = JSON.parse(unsafe_string(ZMQ.recv(conn.sock)))
 
         cmd = get(msg, "cmd", "")
         Logging.info("received request [$cmd]")
