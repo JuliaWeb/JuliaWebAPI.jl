@@ -1,5 +1,5 @@
 julia 0.4
-ZMQ
+ZMQ 0.3.3
 JSON
 Logging
 HttpCommon
