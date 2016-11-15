@@ -2,7 +2,7 @@
 function make_vargs(vargs::Dict{AbstractString,AbstractString})
     arr = Tuple[]
     for (n,v) in vargs
-        push!(arr, (symbol(n),v))
+        push!(arr, (Symbol(n),v))
     end
     arr
 end
