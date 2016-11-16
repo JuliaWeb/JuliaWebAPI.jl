@@ -79,7 +79,7 @@ function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symb
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
     catch ex
-        Logging.error("api_exception: $ex")
+        err("api_exception: $ex")
         respond(conn, Nullable(api), :api_exception)
     end
 end
@@ -139,7 +139,7 @@ function process(conn::APIResponder)
         Logging.info("received request [$cmd]")
 
         if startswith(cmd, ':')    # is a control command
-            ctrlcmd = symbol(cmd[2:end])
+            ctrlcmd = Symbol(cmd[2:end])
             if ctrlcmd === :terminate
                 respond(conn, Nullable{APISpec}(), :terminate, "")
                 break
