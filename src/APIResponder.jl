@@ -40,8 +40,10 @@ function default_endpoint(f::Function)
     endpt
 end
 
-# register a function as API call
-# TODO: validate method belongs to module?
+"""
+Register a function as API call.
+TODO: validate method belongs to module?
+"""
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
                   resp_headers::Dict=Dict{AbstractString,AbstractString}(), endpt=default_endpoint(f))
@@ -85,16 +87,17 @@ function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symb
 end
 
 
-###
-#    over JSON to a properly typed and dimensioned Julia array. Arrays
-#    serialised from JSON are stored as an Array{Any}, even if all the elements
-#    are members of the same concrete type, eg, Float64. This function will
-#    transform such an array to an Array{Float64} type.
-#
-#    Further, since JSON does not have true multidimensional arrays, they are
-#    transmitted as arrays containing arrays. This function will convert them to
-#    a true multidimensional array in Julia.
-###
+#=
+narrow_args! if a private function that processes an Array transferred
+over JSON to a properly typed and dimensioned Julia array. Arrays
+serialised from JSON are stored as an Array{Any}, even if all the elements
+are members of the same concrete type, eg, Float64. This function will
+transform such an array to an Array{Float64} type.
+
+Further, since JSON does not have true multidimensional arrays, they are
+transmitted as arrays containing arrays. This function will convert them to
+a true multidimensional array in Julia.
+=#
 if VERSION < v"0.5.0-dev+3294"
     promote_arr(x) = Base.map_promote(identity, x)
 else
@@ -129,7 +132,7 @@ get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{A
 args(msg::Dict) = get(msg, "args", [])
 data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
 
-# start processing as a server
+"""start processing as a server"""
 function process(conn::APIResponder)
     Logging.debug("processing...")
     while true
