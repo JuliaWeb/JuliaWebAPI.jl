@@ -7,7 +7,7 @@ immutable ZMQTransport <: AbstractTransport
     mode::Int # REQ/REP
     bound::Bool
 
-    function ZMQTransport(addr::String, mode::Int, bound::Bool, ctx::Context=Context())
+    function ZMQTransport(addr::Compat.String, mode::Int, bound::Bool, ctx::Context=Context())
         sock = Socket(ctx, mode)
         if bound
             ZMQ.bind(sock, addr)

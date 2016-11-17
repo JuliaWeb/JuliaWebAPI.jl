@@ -1,5 +1,5 @@
 
-function make_vargs(vargs::Dict{String,String})
+function make_vargs(vargs::Dict{Compat.UTF8String,Compat.UTF8String})
     arr = Tuple[]
     for (n,v) in vargs
         push!(arr, (Symbol(n),v))
@@ -7,7 +7,7 @@ function make_vargs(vargs::Dict{String,String})
     arr
 end
 
-function isvalidcmd(cmd::String)
+function isvalidcmd(cmd::Compat.String)
     isempty(cmd) && return false
     Base.is_id_start_char(cmd[1]) || return false
     for c in cmd
@@ -24,7 +24,7 @@ function parsepostdata(req, query)
             idx = (idx == 0) ? endof(req.data) : (idx - 1)
             post_data = byt2str(req.data[1:idx])
         end
-    elseif isa(req.data, String)
+    elseif isa(req.data, Compat.UTF8String)
         post_data = req.data
     end
     
@@ -41,7 +41,7 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
             res = Response(404)
         else
             path = shift!(comps)
-            data_dict = isempty(comps) ? Dict{String,String}() : parsequerystring(comps[1])
+            data_dict = isempty(comps) ? Dict{Compat.UTF8String,Compat.UTF8String}() : parsequerystring(comps[1])
             data_dict = parsepostdata(req, data_dict)
             args = split(path, '/', keep=false)
 

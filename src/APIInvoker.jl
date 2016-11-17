@@ -11,7 +11,7 @@ APIInvoker holds the transport and format used for a remote api call.
 This method creates an APIInvoker over ZMQ transport using JSON message format.
 (provided for backward compatibility)
 """
-APIInvoker(addr::String, ctx::Context=Context()) = APIInvoker(ZMQTransport(addr, REQ, false, ctx), JSONMsgFormat())
+APIInvoker(addr::Compat.String, ctx::Context=Context()) = APIInvoker(ZMQTransport(addr, REQ, false, ctx), JSONMsgFormat())
 APIInvoker(ip::IPv4, port::Int, ctx::Context=Context()) = APIInvoker(ZMQTransport(ip, port, REQ, false, ctx), JSONMsgFormat())
 
 """

@@ -4,8 +4,8 @@ using Logging
 
 include("srvrfn.jl")
 
-const JSON_RESP_HDRS = Dict{String,String}("Content-Type" => "application/json; charset=utf-8")
-const BINARY_RESP_HDRS = Dict{String,String}("Content-Type" => "application/octet-stream")
+const JSON_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/json; charset=utf-8")
+const BINARY_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/octet-stream")
 
 const REGISTERED_APIS = [
         (testfn1, true, JSON_RESP_HDRS),

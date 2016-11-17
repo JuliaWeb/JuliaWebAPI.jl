@@ -7,10 +7,16 @@ A JSON object with `cmd` (string), `args` (array), `vargs` (dict).
 immutable JSONMsgFormat <: AbstractMsgFormat
 end
 
-data_dict(data) = Dict{Symbol,Any}(n=>v for (n,v) in data)
+function data_dict(data)
+    d = Dict{Symbol,Any}()
+    for (n,v) in data
+        d[n] = v
+    end
+    d
+end
 
-function wireformat(fmt::JSONMsgFormat, cmd::String, args...; data...)
-    req = Dict{String,Any}()
+function wireformat(fmt::JSONMsgFormat, cmd::Compat.String, args...; data...)
+    req = Dict{Compat.UTF8String,Any}()
 
     req["cmd"] = cmd
     isempty(args) || (req["args"] = args)
@@ -20,8 +26,8 @@ function wireformat(fmt::JSONMsgFormat, cmd::String, args...; data...)
     msgstr
 end
 
-function wireformat(fmt::JSONMsgFormat, code::Int, headers::Dict{String,String}, resp, id=nothing)
-    msg = Dict{String,Any}()
+function wireformat(fmt::JSONMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing)
+    msg = Dict{Compat.UTF8String,Any}()
 
     (id == nothing) || (msg["nid"] = id)
 
