@@ -4,16 +4,16 @@ using Logging
 using GZip
 
 const CONTENT_DISPOSITION_TEMPLATE = "attachment; filename="
-const FILE_DOWNLOAD_HDR = @compat Dict{AbstractString,AbstractString}("Content-Type" => "application/octet-stream", "Content-Disposition" => "")
+const FILE_DOWNLOAD_HDR = Dict{String,String}("Content-Type" => "application/octet-stream", "Content-Disposition" => "")
 
-function filebytes(filename::AbstractString)
+function filebytes(filename::String)
     open(filename, "r") do fp
         buff = Array(UInt8, filesize(filename))
         return read!(fp, buff)
     end
 end
 
-function servefile(filename::AbstractString; zipped=false)
+function servefile(filename::String; zipped=false)
     zipped = (zipped == "true")
     FILE_DOWNLOAD_HDR["Content-Disposition"] = string(CONTENT_DISPOSITION_TEMPLATE, filename, zipped?".gz":"")
     open(filename, "r") do fp

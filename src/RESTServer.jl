@@ -1,5 +1,5 @@
 
-function make_vargs(vargs::Dict{AbstractString,AbstractString})
+function make_vargs(vargs::Dict{String,String})
     arr = Tuple[]
     for (n,v) in vargs
         push!(arr, (Symbol(n),v))
@@ -7,7 +7,7 @@ function make_vargs(vargs::Dict{AbstractString,AbstractString})
     arr
 end
 
-function isvalidcmd(cmd::AbstractString)
+function isvalidcmd(cmd::String)
     isempty(cmd) && return false
     Base.is_id_start_char(cmd[1]) || return false
     for c in cmd
@@ -24,7 +24,7 @@ function parsepostdata(req, query)
             idx = (idx == 0) ? endof(req.data) : (idx - 1)
             post_data = byt2str(req.data[1:idx])
         end
-    elseif isa(req.data, AbstractString)
+    elseif isa(req.data, String)
         post_data = req.data
     end
     
@@ -33,28 +33,28 @@ function parsepostdata(req, query)
 end
 
 function rest_handler(api::APIInvoker, req::Request, res::Response)
-    Logging.info("processing request $req")
+    Logging.info("processing request ", req)
     
     try
-        comps = @compat split(req.resource, '?', limit=2, keep=false)
+        comps = split(req.resource, '?', limit=2, keep=false)
         if isempty(comps)
             res = Response(404)
         else
             path = shift!(comps)
-            data_dict = isempty(comps) ? Dict{AbstractString,AbstractString}() : parsequerystring(comps[1])
+            data_dict = isempty(comps) ? Dict{String,String}() : parsequerystring(comps[1])
             data_dict = parsepostdata(req, data_dict)
-            args = @compat split(path, '/', keep=false)
+            args = split(path, '/', keep=false)
 
             if isempty(args) || !isvalidcmd(args[1])
                 res = Response(404)
             else
                 cmd = shift!(args)
                 if isempty(data_dict)
-                    Logging.debug("calling cmd $cmd with args $args")
+                    Logging.debug("calling cmd ", cmd, ", with args ", args)
                     res = httpresponse(apicall(api, cmd, args...))
                 else
                     vargs = make_vargs(data_dict)
-                    Logging.debug("calling cmd $cmd with args $args, vargs $vargs")
+                    Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
                     res = httpresponse(apicall(api, cmd, args...; vargs...))
                 end
             end
@@ -62,14 +62,14 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
     catch e
         res = Response(500)
         Base.showerror(STDERR, e, catch_backtrace())
-        err("Exception in handler: $e")
+        err("Exception in handler: ", e)
     end
-    Logging.debug("\tresponse $res")
+    Logging.debug("\tresponse ", res)
     return res
 end
 
-on_error(client, e) = err("HTTP error: $e")
-on_listen(port) = Logging.info("listening on port $(port)...")
+on_error(client, e) = err("HTTP error: ", e)
+on_listen(port) = Logging.info("listening on port ", port, "...")
 
 type RESTServer
     api::APIInvoker

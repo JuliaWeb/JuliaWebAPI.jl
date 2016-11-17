@@ -9,8 +9,9 @@ using HttpCommon
 using HttpServer
 using Compat
 
-export APIResponder, register, process, process_async
-export APIInvoker, apicall, httpresponse, fnresponse, run_rest
+export AbstractMsgFormat, JSONMsgFormat
+export AbstractAPIResponder, APIResponder, register, process, process_async
+export AbstractAPIInvoker, APIInvoker, apicall, httpresponse, fnresponse, run_rest
 
 const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, ""],
                         :invalid_api        => [404, -1, "invalid api"],
@@ -28,6 +29,8 @@ else
 byte2str(x) = String(x)
 end
 
+include("msgformat.jl")
+include("transport.jl")
 include("APIResponder.jl")
 include("APIInvoker.jl")
 include("RESTServer.jl")

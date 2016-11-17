@@ -1,63 +1,25 @@
-
-type APIInvoker
-    ctx::Context
-    sock::Socket
-
-    function APIInvoker(addr::AbstractString, ctx::Context=Context())
-        a = new()
-        a.ctx = ctx
-        a.sock = Socket(ctx, REQ)
-        ZMQ.connect(a.sock, addr)
-        a
-    end
-    APIInvoker(ip::IPv4, port::Int, ctx::Context=Context()) = APIInvoker("tcp://$ip:$port", ctx)
+"""
+APIInvoker holds the transport and format used for a remote api call.
+"""
+immutable APIInvoker{T<:AbstractTransport,F<:AbstractMsgFormat}
+    transport::T
+    format::F
 end
 
-function data_dict(data::Array)
-    d = Dict{Symbol,Any}()
-    for (n,v) in data
-        d[n] = v
-    end
-    d
+"""
+APIInvoker holds the transport and format used for a remote api call.
+This method creates an APIInvoker over ZMQ transport using JSON message format.
+(provided for backward compatibility)
+"""
+APIInvoker(addr::String, ctx::Context=Context()) = APIInvoker(ZMQTransport(addr, REQ, false, ctx), JSONMsgFormat())
+APIInvoker(ip::IPv4, port::Int, ctx::Context=Context()) = APIInvoker(ZMQTransport(ip, port, REQ, false, ctx), JSONMsgFormat())
+
+"""
+Calls a remote api `cmd` with `args...` and `data...`.
+The response is formatted as specified by the formatter specified in `conn`.
+"""
+function apicall{T<:AbstractTransport,F<:AbstractMsgFormat}(conn::APIInvoker{T,F}, cmd, args...; data...)
+    req = wireformat(conn.format, cmd, args...; data...)
+    resp = sendrecv(conn.transport, req)
+    juliaformat(conn.format, resp)
 end
-
-# call a remote api
-function apicall(conn::APIInvoker, cmd::AbstractString, args...; data...)
-    req = Dict{AbstractString,Any}()
-
-    req["cmd"] = cmd
-    isempty(args) || (req["args"] = args)
-    isempty(data) || (req["vargs"] = data_dict(data))
-
-    msgstr = JSON.json(req)
-    Logging.debug("sending request: $msgstr")
-    ZMQ.send(conn.sock, Message(JSON.json(req)))
-
-    respstr = unsafe_string(ZMQ.recv(conn.sock))
-    Logging.debug("received response $respstr")
-    JSON.parse(respstr)
-end
-
-# construct an HTTP Response object from the API response
-function httpresponse(resp::Dict)
-    hdrs = HttpCommon.headers()
-    if "hdrs" in keys(resp)
-        for (k,v) in resp["hdrs"]
-            hdrs[k] = v
-        end
-    end
-    data = get(resp, "data", "")
-    respdata = isa(data, Array) ? convert(Array{UInt8}, data) :
-               isa(data, Dict) ? JSON.json(data) :
-               string(data)
-    Response(resp["code"], hdrs, respdata)
-end
-
-# extract and return the response data as a direct function call would have returned
-# but throw error if the call was not successful.
-function fnresponse(resp::Dict)
-    data = get(resp, "data", "")
-    (resp["code"] == ERR_CODES[:success][1]) || error("API error: " * data)
-    data
-end
-

@@ -3,8 +3,16 @@ using Logging
 using Base.Test
 using Compat
 
+inline_flag = Base.JLOptions().can_inline == 1 ? `` : `--inline=no`
+cov_flag = ``
+if Base.JLOptions().code_coverage == 1
+    cov_flag = `--code-coverage=user`
+elseif Base.JLOptions().code_coverage == 2
+    cov_flag = `--code-coverage=all`
+end
+
 srvrscript = joinpath(dirname(@__FILE__), "srvr.jl")
-srvrcmd = `$(joinpath(JULIA_HOME, "julia")) $(srvrscript)`
+srvrcmd = `$(joinpath(JULIA_HOME, "julia")) $cov_flag $inline_flag $srvrscript`
 println("spawining $srvrcmd")
 srvrproc = spawn(srvrcmd)
 
@@ -12,7 +20,7 @@ include("clnt.jl")
 println("stopping server process")
 kill(srvrproc)
 
-addprocs(1)
+addprocs(1; exeflags=`$cov_flag $inline_flag`)
 @spawnat 2 include("srvrfn.jl")
 
 tic()
