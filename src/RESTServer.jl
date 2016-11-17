@@ -92,10 +92,9 @@ type RESTServer
     end
 end
 
-function run_rest(api::APIInvoker, port::Int) 
+run_rest(api::APIInvoker, port::Int) = run_rest(api; port=port)
+function run_rest(api::APIInvoker; kwargs...)
     Logging.debug("running rest server...")
     rest = RESTServer(api)
-    run(rest.server, port)
+    run(rest.server; kwargs...)
 end
-
-
