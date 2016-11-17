@@ -23,12 +23,6 @@ const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, "
 
 const CONTROL_CMDS = @compat Dict{Symbol, Array}(:terminate => ["terminate"])
 
-if VERSION < v"0.5.0-dev+4612"
-byte2str(x) = bytestring(x)
-else
-byte2str(x) = String(x)
-end
-
 include("msgformat.jl")
 include("transport.jl")
 include("APIResponder.jl")
