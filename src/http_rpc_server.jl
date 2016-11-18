@@ -32,7 +32,7 @@ function parsepostdata(req, query)
     merge(query, parsequerystring(post_data))
 end
 
-function rest_handler(api::APIInvoker, req::Request, res::Response)
+function http_handler(api::APIInvoker, req::Request, res::Response)
     Logging.info("processing request ", req)
     
     try
@@ -71,16 +71,16 @@ end
 on_error(client, e) = err("HTTP error: ", e)
 on_listen(port) = Logging.info("listening on port ", port, "...")
 
-type RESTServer
+type HttpRpcServer
     api::APIInvoker
     handler::HttpHandler
     server::Server
 
-    function RESTServer(api::APIInvoker)
+    function HttpRpcServer(api::APIInvoker)
         r = new()
 
         function handler(req::Request, res::Response)
-            return rest_handler(api, req, res)
+            return http_handler(api, req, res)
         end
 
         r.api = api
@@ -92,9 +92,12 @@ type RESTServer
     end
 end
 
-run_rest(api::APIInvoker, port::Int) = run_rest(api; port=port)
-function run_rest(api::APIInvoker; kwargs...)
-    Logging.debug("running rest server...")
-    rest = RESTServer(api)
-    run(rest.server; kwargs...)
+run_http(api::APIInvoker, port::Int) = run_http(api; port=port)
+function run_http(api::APIInvoker; kwargs...)
+    Logging.debug("running HTTP RPC server...")
+    httprpc = HttpRpcServer(api)
+    run(httprpc.server; kwargs...)
 end
+
+# for backward compatibility
+@deprecate run_rest(args...; kwargs...) run_http(args...; kwargs...)

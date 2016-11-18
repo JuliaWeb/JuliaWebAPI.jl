@@ -11,7 +11,7 @@ using Compat
 
 export AbstractMsgFormat, JSONMsgFormat
 export AbstractAPIResponder, APIResponder, register, process, process_async
-export AbstractAPIInvoker, APIInvoker, apicall, httpresponse, fnresponse, run_rest
+export AbstractAPIInvoker, APIInvoker, apicall, httpresponse, fnresponse, run_rest, run_http
 
 const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, ""],
                         :invalid_api        => [404, -1, "invalid api"],
@@ -27,6 +27,6 @@ include("msgformat.jl")
 include("transport.jl")
 include("APIResponder.jl")
 include("APIInvoker.jl")
-include("RESTServer.jl")
+include("http_rpc_server.jl")
 
 end # module

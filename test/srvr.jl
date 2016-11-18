@@ -26,9 +26,9 @@ function run_httprpcsrvr(async=false)
     run_srvr(true)
     apiclnt = APIInvoker("tcp://127.0.0.1:9999")
     if async
-        @async run_rest(apiclnt, 8888) 
+        @async run_http(apiclnt, 8888)
     else
-        run_rest(apiclnt, 8888)
+        run_http(apiclnt, 8888)
     end
 end
 

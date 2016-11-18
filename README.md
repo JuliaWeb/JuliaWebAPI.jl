@@ -45,7 +45,7 @@ Logging.configure(level=INFO);
 const apiclnt = APIInvoker("tcp://127.0.0.1:9999");
 
 #Starts the HTTP server in current process
-run_rest(apiclnt, 8888)
+run_http(apiclnt, 8888)
 ```
 
 Then, on your browser, navigate to `http://localhost:8888/testfn1/4/5?narg1=6&narg2=4`
