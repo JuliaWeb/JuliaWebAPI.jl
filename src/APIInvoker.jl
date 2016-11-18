@@ -19,7 +19,7 @@ Calls a remote api `cmd` with `args...` and `data...`.
 The response is formatted as specified by the formatter specified in `conn`.
 """
 function apicall{T<:AbstractTransport,F<:AbstractMsgFormat}(conn::APIInvoker{T,F}, cmd, args...; data...)
-    req = wireformat(conn.format, cmd, args...; data...)
+    req = wireformat(conn.format, Compat.UTF8String(cmd), args...; data...)
     resp = sendrecv(conn.transport, req)
     juliaformat(conn.format, resp)
 end

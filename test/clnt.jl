@@ -5,6 +5,7 @@ using JuliaWebAPI
 using Logging
 using ZMQ
 using Base.Test
+using Requests
 
 Logging.configure(level=INFO)
 
@@ -69,5 +70,18 @@ function run_clnt()
     close(ctx)
 end
 
+function run_httpclnt()
+    println("starting http rpc tests.")
+    resp = JSON.parse(readall(get("http://localhost:8888/testfn1/1/2")))
+    @test resp["code"] == 0
+    @test resp["data"] == 5
+
+    resp = JSON.parse(readall(get("http://localhost:8888/testfn1/1/2"; data=Dict(:narg1=>3, :narg2=>4))))
+    @test resp["code"] == 0
+    @test resp["data"] == 11
+    println("finished http rpc tests.")
+end
+
 # run client if invoked with run flag
 !isempty(ARGS) && (ARGS[1] == "--runclnt") && run_clnt()
+!isempty(ARGS) && (ARGS[1] == "--runhttpclnt") && run_httpclnt()

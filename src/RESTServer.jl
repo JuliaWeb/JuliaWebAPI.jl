@@ -1,5 +1,5 @@
 
-function make_vargs(vargs::Dict{Compat.UTF8String,Compat.UTF8String})
+function make_vargs(vargs)
     arr = Tuple[]
     for (n,v) in vargs
         push!(arr, (Symbol(n),v))
@@ -7,7 +7,7 @@ function make_vargs(vargs::Dict{Compat.UTF8String,Compat.UTF8String})
     arr
 end
 
-function isvalidcmd(cmd::Compat.String)
+function isvalidcmd(cmd)
     isempty(cmd) && return false
     Base.is_id_start_char(cmd[1]) || return false
     for c in cmd
@@ -20,9 +20,9 @@ function parsepostdata(req, query)
     post_data = ""
     if isa(req.data, Vector{UInt8})
         if !isempty(req.data)
-            idx = findfirs(req.data, '\0')
+            idx = findfirst(req.data, '\0')
             idx = (idx == 0) ? endof(req.data) : (idx - 1)
-            post_data = byt2str(req.data[1:idx])
+            post_data = Compat.String(req.data[1:idx])
         end
     elseif isa(req.data, Compat.UTF8String)
         post_data = req.data
@@ -51,11 +51,11 @@ function rest_handler(api::APIInvoker, req::Request, res::Response)
                 cmd = shift!(args)
                 if isempty(data_dict)
                     Logging.debug("calling cmd ", cmd, ", with args ", args)
-                    res = httpresponse(apicall(api, cmd, args...))
+                    res = httpresponse(api.format, apicall(api, cmd, args...))
                 else
                     vargs = make_vargs(data_dict)
                     Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
-                    res = httpresponse(apicall(api, cmd, args...; vargs...))
+                    res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
                 end
             end
         end

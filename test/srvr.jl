@@ -22,5 +22,18 @@ function run_srvr(async=false)
     modefn(REGISTERED_APIS, "tcp://127.0.0.1:9999"; bind=true, log_level=INFO)
 end
 
+function run_httprpcsrvr(async=false)
+    run_srvr(true)
+    apiclnt = APIInvoker("tcp://127.0.0.1:9999")
+    if async
+        @async run_rest(apiclnt, 8888) 
+    else
+        run_rest(apiclnt, 8888)
+    end
+end
+
 # run in blocking mode if invoked with run flag
 !isempty(ARGS) && (ARGS[1] == "--runsrvr") && run_srvr()
+
+# run http rpc server if invoked with flag
+!isempty(ARGS) && (ARGS[1] == "--runhttprpcsrvr") && run_httprpcsrvr()
