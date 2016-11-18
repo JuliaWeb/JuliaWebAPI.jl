@@ -1,3 +1,6 @@
+# The API server serving functions from srvrfn.jl.
+# Runs server in blocking mode when invoked directly with "--runsrvr" argument.
+# Call `run_srvr` to start server otherwise.
 using JuliaWebAPI
 using Logging
 using Compat
@@ -14,4 +17,10 @@ const REGISTERED_APIS = [
         (testArray, false)
     ]
 
-process(REGISTERED_APIS, "tcp://127.0.0.1:9999"; bind=true, log_level=INFO)
+function run_srvr(async=false)
+    modefn = async ? process_async : process
+    modefn(REGISTERED_APIS, "tcp://127.0.0.1:9999"; bind=true, log_level=INFO)
+end
+
+# run in blocking mode if invoked with run flag
+!isempty(ARGS) && (ARGS[1] == "--runsrvr") && run_srvr()
