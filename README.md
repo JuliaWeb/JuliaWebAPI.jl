@@ -1,17 +1,18 @@
 # JuliaWebAPI.jl
 
 [![Build Status](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl.svg?branch=master)](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl)
+[![Coverage Status](https://coveralls.io/repos/github/JuliaWeb/JuliaWebAPI.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaWeb/JuliaWebAPI.jl?branch=master)
 
-Facilitates wrapping Julia functions into a remote callable API via ZMQ and HTTP.
-Combined with [JuliaBox](https://juliabox.org/), it helps deploy Julia packages and code snippets as publicly hosted, auto-scaling REST APIs.
+Facilitates wrapping Julia functions into a remote callable API via message queues (e.g. ZMQ) and HTTP.
 
-JuliaWebAPI can also be connected to other server/messaging frontends with a little bit of plumbing that can marshal messages to and from the ZMQ based protocol followed here.
+It can plug in to a different messaging infrastructure through an implementation of transport (`AbstractTransport`) and message format (`AbstractMsgFormat`).
+Multiple instances of the front (HTTP API) and back (Julia methods) end can help scale an application.
 
-## Standalone Usage
+Combined with [JuliaBox](https://juliabox.org/), it helps deploy Julia packages and code snippets as publicly hosted, auto-scaling HTTP APIs.
 
-Example usage to create a simple wrapper. 
+## Example Usage
 
-Assume a file `srvr.jl` that contains the definition of the following code
+Create a file `srvr.jl` with the following code
 
 ```julia
 # Load required packages
@@ -34,19 +35,20 @@ Start the server process in the background. This process will run the ZMQ listen
 julia srvr.jl &
 ````
 
-Then, in a Julia REPL, run the following code
+Then, on a Julia REPL, run the following code
 ```julia
-julia> using JuliaWebAPI   #Load package
+using JuliaWebAPI   #Load package
+using Logging
+Logging.configure(level=INFO);
 
 #Create the ZMQ client that talks to the ZMQ listener above
-julia> const apiclnt = APIInvoker("tcp://127.0.0.1:9999")
-APIInvoker(Context(Ptr{Void} @0x00007f8f62539d70,[Socket(Ptr{Void} @0x00007f8f6366a800)]),Socket(Ptr{Void} @0x00007f8f6366a800))
+const apiclnt = APIInvoker("tcp://127.0.0.1:9999");
 
-julia> run_rest(apiclnt, 8888)         #Starts the HTTP server in current process
-19-Dec 22:56:29:INFO:root:listening on port 8888...
+#Starts the HTTP server in current process
+run_http(apiclnt, 8888)
 ```
 
-Then, in your browser, navigate to `http://localhost:8888/testfn1/4/5?narg1=6&narg2=4`
+Then, on your browser, navigate to `http://localhost:8888/testfn1/4/5?narg1=6&narg2=4`
 
 This will return the following JSON response to your browser, which is the result of running the `testfn1` function defined above:
 `{"data"=>44,"code"=>0}`

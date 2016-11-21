@@ -1,30 +1,30 @@
-type APISpec
+abstract AbstractAPIResponder
+
+immutable APISpec
     fn::Function
     resp_json::Bool
-    resp_headers::Dict
+    resp_headers::Dict{Compat.UTF8String,Compat.UTF8String}
 end
 
-type APIResponder
-    ctx::Context
-    sock::Socket
-    endpoints::Dict{AbstractString, APISpec}
-    nid::AbstractString
+typealias EndPts Dict{Compat.UTF8String,APISpec}
 
-    function APIResponder(addr::AbstractString, ctx::Context=Context(), bind::Bool=true, nid::AbstractString="")
-        a = new()
-        a.ctx = ctx
-        a.nid = nid
-        a.sock = Socket(ctx, REP)
-        a.endpoints = Dict{AbstractString, APISpec}()
-        if bind
-            ZMQ.bind(a.sock, addr)
-        else
-            ZMQ.connect(a.sock, addr)
-        end
-        a
-    end
-    APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
+"""
+APIResponder holds the transport and format used for data exchange and the endpoint specifications.
+"""
+immutable APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
+    transport::T
+    format::F
+    id::Union{Void,Compat.UTF8String}  # optional responder id to be sent back
+    endpoints::EndPts
 end
+
+"""
+APIResponder holds the transport and format used for data exchange and the endpoint specifications.
+This method creates an APIResponder over ZMQ transport using JSON message format.
+(provided for backward compatibility)
+"""
+APIResponder(addr::Compat.String, ctx::Context=Context(), bound::Bool=true, id=nothing) = APIResponder(ZMQTransport(addr, REP, bound, ctx), JSONMsgFormat(), id, EndPts())
+APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
 
 function Base.show(io::IO, x::APIResponder)
     println(io, "JuliaWebAPI.APIResponder with endpoints:")
@@ -46,44 +46,47 @@ TODO: validate method belongs to module?
 """
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
-                  resp_headers::Dict=Dict{AbstractString,AbstractString}(), endpt=default_endpoint(f))
+                  resp_headers::Dict=Dict{Compat.UTF8String,Compat.UTF8String}(), endpt=default_endpoint(f))
     Logging.debug("registering endpoint [$endpt]")
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
-    return conn #make fluent api possible
+    return conn # make fluent api possible
 end
 
-function respond(conn::APIResponder, code::Int, headers::Dict, resp::Any)
-    msg = Dict{AbstractString,Any}()
-
-    isempty(conn.nid) || (msg["nid"] = conn.nid)
-
-    if !isempty(headers)
-        msg["hdrs"] = headers
-        Logging.debug("sending headers [$headers]")
-    end
-
-    msg["code"] = code
-    msg["data"] = resp
-
-    msgstr = JSON.json(msg)
-    Logging.debug("sending response [$msgstr]")
-    ZMQ.send(conn.sock, Message(msgstr))
+"""send a response over the transport in the specified format"""
+function respond(conn::APIResponder, code::Int, headers::Dict, resp)
+    resp = wireformat(conn.format, code, headers, resp, conn.id)
+    sendresp(conn.transport, resp)
 end
 
-respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp::Any=nothing) =
+respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp=nothing) =
     respond(conn, ERR_CODES[status][1], get_hdrs(api), get_resp(api, status, resp))
 
+get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{Compat.UTF8String,Compat.UTF8String}()
+
+function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
+    st = ERR_CODES[status]
+    stcode = st[2]
+    stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
+
+    if !isnull(api) && get(api).resp_json
+        return Dict{Compat.UTF8String, Any}("code"=>stcode, "data"=>stresp)
+    else
+        return stresp
+    end
+end
+
+"""call the actual API method, and send the return value back as response"""
 function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symbol,Any})
-    try
+    #try
         if !applicable(api.fn, args...)
             narrow_args!(args)
         end
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
-    catch ex
-        err("api_exception: $ex")
-        respond(conn, Nullable(api), :api_exception)
-    end
+    #catch ex
+    #    err("api_exception: $ex")
+    #    respond(conn, Nullable(api), :api_exception)
+    #end
 end
 
 
@@ -115,76 +118,58 @@ function narrow_args!(x)
     end
 end
 
-function get_resp(api::Nullable{APISpec}, status::Symbol, resp::Any=nothing)
-    st = ERR_CODES[status]
-    stcode = st[2]
-    stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
-
-    if !isnull(api) && get(api).resp_json
-        return @compat Dict{AbstractString, Any}("code" => stcode, "data" => stresp)
-    else
-        return stresp
-    end
-end
-
-get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{AbstractString,AbstractString}()
-
-args(msg::Dict) = get(msg, "args", [])
-data(msg::Dict) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
-
 """start processing as a server"""
 function process(conn::APIResponder)
     Logging.debug("processing...")
     while true
-        msg = JSON.parse(unsafe_string(ZMQ.recv(conn.sock)))
+        msg = juliaformat(conn.format, recvreq(conn.transport))
 
-        cmd = get(msg, "cmd", "")
-        Logging.info("received request [$cmd]")
+        command = cmd(conn.format, msg)
+        Logging.info("received request: ", command)
 
-        if startswith(cmd, ':')    # is a control command
-            ctrlcmd = Symbol(cmd[2:end])
+        if startswith(command, ':')    # is a control command
+            ctrlcmd = Symbol(command[2:end])
             if ctrlcmd === :terminate
                 respond(conn, Nullable{APISpec}(), :terminate, "")
                 break
             else
-                err("invalid control command $cmd")
+                err("invalid control command ", command)
                 continue
             end
         end
 
-        if !haskey(conn.endpoints, cmd)
+        if !haskey(conn.endpoints, command)
             respond(conn, Nullable{APISpec}(), :invalid_api)
             continue
         end
 
         try
-            call_api(conn.endpoints[cmd], conn, args(msg), data(msg))
-        catch e
-            err("exception $e")
-            respond(conn, Nullable(conn.endpoints[cmd]), :invalid_data)
+            call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
+        catch ex
+            err("exception ", ex)
+            respond(conn, Nullable(conn.endpoints[command]), :invalid_data)
         end
     end
-    close(conn.sock)
-    #close(conn.ctx)
+    close(conn.transport)
     Logging.info("stopped processing.")
     conn
 end
 
-function setup_logging(;log_level=INFO, nid::AbstractString=get(ENV,"JBAPI_CID",""))
+function setup_logging(;log_level=INFO, nid::Compat.String=get(ENV,"JBAPI_CID",""))
     api_name = get(ENV,"JBAPI_NAME", "noname")
     logfile = "apisrvr_$(api_name)_$(nid).log"
     Logging.configure(level=log_level, filename=logfile)
 end
 
-function process_async(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""))
+function process_async(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""))
     process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, async=true)
 end
 
-function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
-                bind::Bool=false, nid::AbstractString=get(ENV,"JBAPI_CID",""), async::Bool=false)
+function process(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
+                bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), async::Bool=false)
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
-    api = create_responder(apispecs, addr, bind, nid)
+    api = create_responder(apispecs, addr, bind, Compat.UTF8String(nid))
 
     if async
         Logging.debug("processing async...")
@@ -196,12 +181,12 @@ function process(apispecs::Array, addr::AbstractString=get(ENV,"JBAPI_QUEUE","")
     api
 end
 
-_add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{AbstractString,AbstractString}())
+_add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{Compat.UTF8String,Compat.UTF8String}())
 
 function _add_spec(spec::Tuple, api::APIResponder)
     fn = spec[1]
     resp_json = (length(spec) > 1) ? spec[2] : false
-    resp_headers = (length(spec) > 2) ? spec[3] : Dict{AbstractString,AbstractString}()
+    resp_headers = (length(spec) > 2) ? spec[3] : Dict{Compat.UTF8String,Compat.UTF8String}()
     api_name = (length(spec) > 3) ? spec[4] : default_endpoint(fn)
     register(api, fn, resp_json=resp_json, resp_headers=resp_headers, endpt=api_name)
 end
