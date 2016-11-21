@@ -15,6 +15,7 @@ immutable APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
     transport::T
     format::F
     id::Union{Void,Compat.UTF8String}  # optional responder id to be sent back
+    open::Bool  #whether the responder will process all functions, or only registered ones
     endpoints::EndPts
 end
 
@@ -23,7 +24,7 @@ APIResponder holds the transport and format used for data exchange and the endpo
 This method creates an APIResponder over ZMQ transport using JSON message format.
 (provided for backward compatibility)
 """
-APIResponder(addr::Compat.String, ctx::Context=Context(), bound::Bool=true, id=nothing) = APIResponder(ZMQTransport(addr, REP, bound, ctx), JSONMsgFormat(), id, EndPts())
+APIResponder(addr::Compat.String, ctx::Context=Context(), bound::Bool=true, id=nothing, open=false) = APIResponder(ZMQTransport(addr, REP, bound, ctx), JSONMsgFormat(), id, open, EndPts())
 APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
 
 function Base.show(io::IO, x::APIResponder)
@@ -139,8 +140,12 @@ function process(conn::APIResponder)
         end
 
         if !haskey(conn.endpoints, command)
-            respond(conn, Nullable{APISpec}(), :invalid_api)
-            continue
+            if !conn.open || !isdefined(Main, Symbol(command))
+                respond(conn, Nullable{APISpec}(), :invalid_api)
+                continue
+            else
+                _add_spec(getfield(Main, Symbol(command)), conn)
+            end
         end
 
         try
@@ -161,15 +166,15 @@ function setup_logging(;log_level=INFO, nid::Compat.String=get(ENV,"JBAPI_CID","
     Logging.configure(level=log_level, filename=logfile)
 end
 
-function process_async(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""))
-    process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, async=true)
+function process_async(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), open::Bool=false)
+    process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, open=open, async=true)
 end
 
 function process(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
-                bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), async::Bool=false)
+                bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), open::Bool=false, async::Bool=false)
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
-    api = create_responder(apispecs, addr, bind, Compat.UTF8String(nid))
+    api = create_responder(apispecs, addr, bind, Compat.UTF8String(nid),open)
 
     if async
         Logging.debug("processing async...")
@@ -191,8 +196,8 @@ function _add_spec(spec::Tuple, api::APIResponder)
     register(api, fn, resp_json=resp_json, resp_headers=resp_headers, endpt=api_name)
 end
 
-function create_responder(apispecs::Array, addr, bind, nid)
-    api = APIResponder(addr, Context(), bind, nid)
+function create_responder(apispecs::Array, addr, bind, nid, open=false)
+    api = APIResponder(addr, Context(), bind, nid, open)
     for spec in apispecs
         _add_spec(spec, api)
     end
