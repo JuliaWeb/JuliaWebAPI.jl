@@ -7,6 +7,10 @@ Facilitates wrapping Julia functions into a remote callable API via message queu
 
 It can plug in to a different messaging infrastructure through an implementation of transport (`AbstractTransport`) and message format (`AbstractMsgFormat`).
 Multiple instances of the front (HTTP API) and back (Julia methods) end can help scale an application.
+Bundled with the package are implementations for:
+- ZMQTransport: use ZMQ for transport
+- JSONMsgFormat: JSON as message format
+- SerializedMsgFormat: Julia serialization as message format
 
 Combined with [JuliaBox](https://juliabox.org/), it helps deploy Julia packages and code snippets as publicly hosted, auto-scaling HTTP APIs.
 
