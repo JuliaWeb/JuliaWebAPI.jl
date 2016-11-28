@@ -19,6 +19,8 @@ immutable APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
     endpoints::EndPts
 end
 
+APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}(transport::T, format::F, id::Union{Void,Compat.UTF8String}=nothing, open::Bool=false) = APIResponder(transport, format, id, open, EndPts())
+
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
 This method creates an APIResponder over ZMQ transport using JSON message format.
@@ -78,16 +80,16 @@ end
 
 """call the actual API method, and send the return value back as response"""
 function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symbol,Any})
-    #try
+    try
         if !applicable(api.fn, args...)
             narrow_args!(args)
         end
         result = api.fn(args...; data...)
         respond(conn, Nullable(api), :success, result)
-    #catch ex
-    #    err("api_exception: $ex")
-    #    respond(conn, Nullable(api), :api_exception)
-    #end
+    catch ex
+        err("api_exception: $ex")
+        respond(conn, Nullable(api), :api_exception)
+    end
 end
 
 
@@ -120,43 +122,48 @@ function narrow_args!(x)
 end
 
 """start processing as a server"""
-function process(conn::APIResponder)
-    Logging.debug("processing...")
-    while true
-        msg = juliaformat(conn.format, recvreq(conn.transport))
+function process(conn::APIResponder; async::Bool=false)
+    if async
+        Logging.debug("processing async...")
+        @async process(conn)
+    else
+        Logging.debug("processing...")
+        while true
+            msg = juliaformat(conn.format, recvreq(conn.transport))
 
-        command = cmd(conn.format, msg)
-        Logging.info("received request: ", command)
+            command = cmd(conn.format, msg)
+            Logging.info("received request: ", command)
 
-        if startswith(command, ':')    # is a control command
-            ctrlcmd = Symbol(command[2:end])
-            if ctrlcmd === :terminate
-                respond(conn, Nullable{APISpec}(), :terminate, "")
-                break
-            else
-                err("invalid control command ", command)
-                continue
+            if startswith(command, ':')    # is a control command
+                ctrlcmd = Symbol(command[2:end])
+                if ctrlcmd === :terminate
+                    respond(conn, Nullable{APISpec}(), :terminate, "")
+                    break
+                else
+                    err("invalid control command ", command)
+                    continue
+                end
+            end
+
+            if !haskey(conn.endpoints, command)
+                if !conn.open || !isdefined(Main, Symbol(command))
+                    respond(conn, Nullable{APISpec}(), :invalid_api)
+                    continue
+                else
+                    _add_spec(getfield(Main, Symbol(command)), conn)
+                end
+            end
+
+            try
+                call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
+            catch ex
+                err("exception ", ex)
+                respond(conn, Nullable(conn.endpoints[command]), :invalid_data)
             end
         end
-
-        if !haskey(conn.endpoints, command)
-            if !conn.open || !isdefined(Main, Symbol(command))
-                respond(conn, Nullable{APISpec}(), :invalid_api)
-                continue
-            else
-                _add_spec(getfield(Main, Symbol(command)), conn)
-            end
-        end
-
-        try
-            call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
-        catch ex
-            err("exception ", ex)
-            respond(conn, Nullable(conn.endpoints[command]), :invalid_data)
-        end
+        close(conn.transport)
+        Logging.info("stopped processing.")
     end
-    close(conn.transport)
-    Logging.info("stopped processing.")
     conn
 end
 
@@ -175,15 +182,7 @@ function process(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE","");
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
     api = create_responder(apispecs, addr, bind, Compat.UTF8String(nid),open)
-
-    if async
-        Logging.debug("processing async...")
-        @async process(api)
-    else
-        Logging.debug("processing...")
-        process(api)
-    end
-    api
+    process(api; async=async)
 end
 
 _add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{Compat.UTF8String,Compat.UTF8String}())
@@ -197,7 +196,7 @@ function _add_spec(spec::Tuple, api::APIResponder)
 end
 
 function create_responder(apispecs::Array, addr, bind, nid, open=false)
-    api = APIResponder(addr, Context(), bind, nid, open)
+    api = APIResponder(ZMQTransport(addr, REP, bind, Context()), JSONMsgFormat(), nid, open)
     for spec in apispecs
         _add_spec(spec, api)
     end

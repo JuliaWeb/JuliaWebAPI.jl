@@ -11,7 +11,7 @@ Logging.configure(level=INFO)
 
 const ctx = Context()
 
-const apiclnt = APIInvoker("tcp://127.0.0.1:9999", ctx)
+const apiclnt = APIInvoker(ZMQTransport("tcp://127.0.0.1:9999", REQ, false, ctx), JSONMsgFormat())
 
 const NCALLS = 100
 
