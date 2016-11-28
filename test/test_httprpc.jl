@@ -8,7 +8,7 @@ include("clnt.jl")
 
 function run_httprpctests()
     println("starting httpserver in async mode...")
-    run_httprpcsrvr(true)
+    run_httprpcsrvr(:json, true)
     println("starting client...")
     run_httpclnt()
 end

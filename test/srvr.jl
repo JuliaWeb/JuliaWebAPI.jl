@@ -12,11 +12,13 @@ const SRVR_ADDR = "tcp://127.0.0.1:9999"
 const JSON_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/json; charset=utf-8")
 const BINARY_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/octet-stream")
 
-function run_srvr(async=false)
+function run_srvr(format=:json, async=false)
+    fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
+
     Logging.configure(level=INFO, filename="apisrvr_test.log")
     Logging.info("queue is at $SRVR_ADDR")
 
-    api = APIResponder(ZMQTransport(SRVR_ADDR, REP, true), JSONMsgFormat())
+    api = APIResponder(ZMQTransport(SRVR_ADDR, REP, true), fmt)
 
     register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
     register(api, testfn2)
@@ -26,9 +28,11 @@ function run_srvr(async=false)
     process(api; async=async)
 end
 
-function run_httprpcsrvr(async=false)
-    run_srvr(true)
-    apiclnt = APIInvoker(ZMQTransport(SRVR_ADDR, REQ, false), JSONMsgFormat())
+function run_httprpcsrvr(format=:json, async=false)
+    fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
+
+    run_srvr(format, true)
+    apiclnt = APIInvoker(ZMQTransport(SRVR_ADDR, REQ, false), fmt)
     if async
         @async run_http(apiclnt, 8888)
     else

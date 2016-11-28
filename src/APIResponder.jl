@@ -79,7 +79,7 @@ function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
 end
 
 """call the actual API method, and send the return value back as response"""
-function call_api(api::APISpec, conn::APIResponder, args::Array, data::Dict{Symbol,Any})
+function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any})
     try
         if !applicable(api.fn, args...)
             narrow_args!(args)
