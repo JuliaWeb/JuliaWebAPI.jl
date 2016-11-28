@@ -13,19 +13,30 @@ const JSON_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" 
 const BINARY_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/octet-stream")
 
 function run_srvr(format=:json, async=false)
-    fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
+    if (format == :json) && async
+        # test the default convenience function
+        REGISTERED_APIS = [
+            (testfn1, true, JSON_RESP_HDRS),
+            (testfn2, false),
+            (testbinary, false, BINARY_RESP_HDRS),
+            (testArray, false)
+        ]
+        process_async(REGISTERED_APIS, SRVR_ADDR, ; bind=true, log_level=INFO)
+    else
+        fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
 
-    Logging.configure(level=INFO, filename="apisrvr_test.log")
-    Logging.info("queue is at $SRVR_ADDR")
+        Logging.configure(level=INFO, filename="apisrvr_test.log")
+        Logging.info("queue is at $SRVR_ADDR")
 
-    api = APIResponder(ZMQTransport(SRVR_ADDR, REP, true), fmt)
+        api = APIResponder(ZMQTransport(SRVR_ADDR, REP, true), fmt)
 
-    register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
-    register(api, testfn2)
-    register(api, testbinary; resp_headers=BINARY_RESP_HDRS)
-    register(api, testArray)
+        register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
+        register(api, testfn2)
+        register(api, testbinary; resp_headers=BINARY_RESP_HDRS)
+        register(api, testArray)
 
-    process(api; async=async)
+        process(api; async=async)
+    end
 end
 
 function run_httprpcsrvr(format=:json, async=false)
