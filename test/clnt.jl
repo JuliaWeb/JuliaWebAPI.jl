@@ -9,31 +9,30 @@ using Requests
 
 Logging.configure(level=INFO)
 
-const ctx = Context()
-
-const apiclnt = APIInvoker("tcp://127.0.0.1:9999", ctx)
-
 const NCALLS = 100
-
 const APIARGS = randperm(NCALLS*4)
 
-function printresp(testname, resp)
+function printresp(apiclnt, testname, resp)
     hresp = httpresponse(apiclnt.format, resp)
     println("\t$(testname): $(hresp)")
     println("\t\tdata: $(hresp.data)")
     println("\t\thdrs: $(hresp.headers)")
 end
 
-function run_clnt()
+function run_clnt(format=:json)
+    ctx = Context()
+    fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
+    apiclnt = APIInvoker(ZMQTransport("tcp://127.0.0.1:9999", REQ, false, ctx), fmt)
+
     println("testing httpresponse...")
     resp = apicall(apiclnt, "testfn1", 1, 2, narg1=3, narg2=4)
-    printresp("testfn1", resp)
+    printresp(apiclnt, "testfn1", resp)
 
     resp = apicall(apiclnt, "testfn2", 1, 2, narg1=3, narg2=4)
-    printresp("testfn1", resp)
+    printresp(apiclnt, "testfn1", resp)
 
     resp = apicall(apiclnt, "testbinary", 10)
-    printresp("testbinary", resp)
+    printresp(apiclnt, "testbinary", resp)
 
     tic()
     for idx in 1:100

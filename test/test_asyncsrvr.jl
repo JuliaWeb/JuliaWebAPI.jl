@@ -5,8 +5,8 @@ include("srvr.jl")
 include("clnt.jl")
 
 function test_asyncsrvr()
-    run_srvr(true)
-    run_clnt()
+    run_srvr(:json, true)
+    run_clnt(:json)
 end
 
 # run tests if invoked with run flag

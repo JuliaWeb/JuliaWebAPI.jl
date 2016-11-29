@@ -9,8 +9,9 @@ using HttpCommon
 using HttpServer
 using Compat
 
-export AbstractMsgFormat, JSONMsgFormat
-export AbstractAPIResponder, APIResponder, register, process, process_async
+export AbstractMsgFormat, JSONMsgFormat, SerializedMsgFormat
+export AbstractTransport, ZMQTransport
+export AbstractAPIResponder, APIResponder, EndPts, APISpec, register, process, process_async
 export AbstractAPIInvoker, APIInvoker, apicall, httpresponse, fnresponse, run_rest, run_http
 
 const ERR_CODES = @compat Dict{Symbol, Array}(:success            => [200,  0, ""],
