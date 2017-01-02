@@ -2,6 +2,13 @@ language: julia
 os:
     - osx
     - linux
+addons:
+    apt:
+        packages:
+        - libzmq3
+before_install:
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zeromq32; fi
 julia:
     - 0.4
     - 0.5
@@ -10,7 +17,7 @@ notifications:
     email: false
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia -e 'Pkg.clone(pwd()); Pkg.build("JuliaWebAPI"); Pkg.test("JuliaWebAPI"; coverage=true)';
+    - julia -e 'Pkg.clone(pwd()); Pkg.build("ZMQ"); Pkg.build("JuliaWebAPI"); Pkg.test("JuliaWebAPI"; coverage=true)';
 after_success:
   - julia -e 'cd(Pkg.dir("JuliaWebAPI")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())';
 #  - julia -e 'cd(Pkg.dir("JuliaWebAPI")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())';
