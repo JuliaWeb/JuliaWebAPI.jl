@@ -38,20 +38,41 @@ end
 
 function listfiles()
     iob = IOBuffer()
-    println(iob, "<html><body>")
-    println(iob, "Click on a file to download:<br/>")
-    println(iob, "<ul>")
+    println(iob, """<html><body>
+                    Upload a file:
+                    <form method="POST" enctype="multipart/form-data" action="/savefile">
+                        File: <input type="file" name="upfile"><br/>
+                        Name: <input type="text" name="filename"><br/>
+                        <input type="submit" value="Submit">
+                    </form>
+                    <hr/>
+                    Click on a file to download:<br/>
+                    <ul>""")
     for fname in readdir()
         println(iob, "<li><a href=\"/servefile/$fname\">$fname</a> | <a href=\"/servefile/$fname?zipped=true\">zipped</a></li>")
     end
-    println(iob, "</ul>")
-    println(iob, "</body></html>")
+    println(iob, "</ul></body></html>")
     takebuf_string(iob)
+end
+
+function savefile(; upfile=nothing, filename=nothing)
+    fname = String(base64decode(filename))
+    data = base64decode(upfile)
+    savefile(fname, data)
+end
+
+function savefile(filename::String, upfile::Vector{UInt8})
+    filename = joinpath(pwd(), String(filename))
+    open(filename, "w") do f
+        write(f, upfile)
+    end
+    listfiles()
 end
 
 const REGISTERED_APIS = [
         (listfiles, false),
-        (servefile, false, FILE_DOWNLOAD_HDR)
+        (servefile, false, FILE_DOWNLOAD_HDR),
+        (savefile, false),
     ]
 
 process(REGISTERED_APIS, "tcp://127.0.0.1:9999"; bind=true, log_level=INFO)

@@ -19,7 +19,8 @@ function run_srvr(format=:json, async=false)
             (testfn1, true, JSON_RESP_HDRS),
             (testfn2, false),
             (testbinary, false, BINARY_RESP_HDRS),
-            (testArray, false)
+            (testArray, false),
+            (testFile, true, JSON_RESP_HDRS)
         ]
         process_async(REGISTERED_APIS, SRVR_ADDR, ; bind=true, log_level=INFO)
     else
@@ -34,6 +35,7 @@ function run_srvr(format=:json, async=false)
         register(api, testfn2)
         register(api, testbinary; resp_headers=BINARY_RESP_HDRS)
         register(api, testArray)
+        register(api, testFile; resp_json=true, resp_headers=JSON_RESP_HDRS)
 
         process(api; async=async)
     end

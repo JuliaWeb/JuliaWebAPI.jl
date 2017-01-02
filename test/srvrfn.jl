@@ -13,3 +13,11 @@ testbinary(datalen::Compat.String) = testbinary(parse(Int,datalen))
 testbinary(datalen::Int) = rand(UInt8, datalen)
 
 testArray(x::Array{Float64, 2}) = sum(x) + x[1,2]
+
+function testFile(;filename=nothing, filedata=nothing)
+    filename = base64decode(filename)
+    filedata = base64decode(filedata)
+    #println("[", String(filename), "]")
+    #println("[", String(filedata), "]")
+    string(length(filename)) * "," * string(length(filedata))
+end
