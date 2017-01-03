@@ -78,6 +78,15 @@ function run_httpclnt()
     resp = JSON.parse(readall(get("http://localhost:8888/testfn1/1/2"; data=Dict(:narg1=>3, :narg2=>4))))
     @test resp["code"] == 0
     @test resp["data"] == 11
+
+    println("testing file upload...")
+    filename = "a.txt"
+    postdata = """------WebKitFormBoundaryIabcPsAlNKQmowCx\r\nContent-Disposition: form-data; name="filedata"; filename="a.txt"\r\nContent-Type: text/plain\r\n\r\nLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n\r\n------WebKitFormBoundaryIabcPsAlNKQmowCx\r\nContent-Disposition: form-data; name="filename"\r\n\r\na.txt\r\n------WebKitFormBoundaryIabcPsAlNKQmowCx--\r\n"""
+    headers = Dict("Content-Type"=>"multipart/form-data; boundary=----WebKitFormBoundaryIabcPsAlNKQmowCx")
+    resp = JSON.parse(readall(post("http://localhost:8888/testFile"; headers=headers, data=postdata)))
+    @test resp["code"] == 0
+    @test resp["data"] == "5,446"
+
     println("finished http rpc tests.")
 end
 
