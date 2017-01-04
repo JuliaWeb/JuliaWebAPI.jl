@@ -2,6 +2,7 @@
 # Runs server in blocking mode when invoked directly with "--runsrvr" argument.
 # Call `run_srvr` to start server otherwise.
 using JuliaWebAPI
+using HttpCommon
 using Logging
 using Compat
 using ZMQ
@@ -41,15 +42,25 @@ function run_srvr(format=:json, async=false)
     end
 end
 
+function test_preproc(req::Request, res::Response)
+    for (n,v) in req.headers
+        if lowercase(n) == "juliawebapi"
+            res.status = parse(Int, v)
+            return false
+        end
+    end
+    JuliaWebAPI.default_preproc(req, res)
+end
+
 function run_httprpcsrvr(format=:json, async=false)
     fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
 
     run_srvr(format, true)
     apiclnt = APIInvoker(ZMQTransport(SRVR_ADDR, REQ, false), fmt)
     if async
-        @async run_http(apiclnt, 8888)
+        @async run_http(apiclnt, 8888, test_preproc)
     else
-        run_http(apiclnt, 8888)
+        run_http(apiclnt, 8888, test_preproc)
     end
 end
 

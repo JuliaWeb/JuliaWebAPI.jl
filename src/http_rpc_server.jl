@@ -140,8 +140,7 @@ function get_multipart_form_boundary(req::Request)
     parts[2]
 end
 
-# take a multipart handler
-function http_handler(api::APIInvoker, req::Request, res::Response)
+function http_handler(api::APIInvoker, preproc::Function, req::Request, res::Response)
     Logging.info("processing request ", req)
     
     try
@@ -149,27 +148,29 @@ function http_handler(api::APIInvoker, req::Request, res::Response)
         if isempty(comps)
             res = Response(404)
         else
-            path = shift!(comps)
-            data_dict = isempty(comps) ? Dict{Compat.UTF8String,Compat.UTF8String}() : parsequerystring(comps[1])
-            multipart_boundary = get_multipart_form_boundary(req)
-            if multipart_boundary === nothing
-                data_dict = parsepostdata(req, data_dict)
-            else
-                data_dict = parsepostdata(req, data_dict, multipart_boundary)
-            end
-            args = split(path, '/', keep=false)
-
-            if isempty(args) || !isvalidcmd(args[1])
-                res = Response(404)
-            else
-                cmd = shift!(args)
-                if isempty(data_dict)
-                    Logging.debug("calling cmd ", cmd, ", with args ", args)
-                    res = httpresponse(api.format, apicall(api, cmd, args...))
+            if preproc(req, res)
+                path = shift!(comps)
+                data_dict = isempty(comps) ? Dict{Compat.UTF8String,Compat.UTF8String}() : parsequerystring(comps[1])
+                multipart_boundary = get_multipart_form_boundary(req)
+                if multipart_boundary === nothing
+                    data_dict = parsepostdata(req, data_dict)
                 else
-                    vargs = make_vargs(data_dict)
-                    Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
-                    res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
+                    data_dict = parsepostdata(req, data_dict, multipart_boundary)
+                end
+                args = split(path, '/', keep=false)
+
+                if isempty(args) || !isvalidcmd(args[1])
+                    res = Response(404)
+                else
+                    cmd = shift!(args)
+                    if isempty(data_dict)
+                        Logging.debug("calling cmd ", cmd, ", with args ", args)
+                        res = httpresponse(api.format, apicall(api, cmd, args...))
+                    else
+                        vargs = make_vargs(data_dict)
+                        Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
+                        res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
+                    end
                 end
             end
         end
@@ -185,17 +186,19 @@ end
 on_error(client, e) = err("HTTP error: ", e)
 on_listen(port) = Logging.info("listening on port ", port, "...")
 
+default_preproc(req::Request, res::Response) = true
+
 # add a multipart form handler, provide default
 type HttpRpcServer
     api::APIInvoker
     handler::HttpHandler
     server::Server
 
-    function HttpRpcServer(api::APIInvoker)
+    function HttpRpcServer(api::APIInvoker, preproc::Function=default_preproc)
         r = new()
 
         function handler(req::Request, res::Response)
-            return http_handler(api, req, res)
+            return http_handler(api, preproc, req, res)
         end
 
         r.api = api
@@ -207,10 +210,10 @@ type HttpRpcServer
     end
 end
 
-run_http(api::APIInvoker, port::Int) = run_http(api; port=port)
-function run_http(api::APIInvoker; kwargs...)
+run_http(api::APIInvoker, port::Int, preproc::Function=default_preproc) = run_http(api, preproc; port=port)
+function run_http(api::APIInvoker, preproc::Function=default_preproc; kwargs...)
     Logging.debug("running HTTP RPC server...")
-    httprpc = HttpRpcServer(api)
+    httprpc = HttpRpcServer(api, preproc)
     run(httprpc.server; kwargs...)
 end
 

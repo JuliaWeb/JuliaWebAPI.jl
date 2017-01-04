@@ -60,7 +60,7 @@ end
 function _dict_ser(d)
     io = IOBuffer()
     serialize(io, d)
-    takebuf_array(io)
+    take!(io)
 end
 _dict_dser(b) = deserialize(IOBuffer(b))
 

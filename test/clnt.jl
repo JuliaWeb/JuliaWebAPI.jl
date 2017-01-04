@@ -71,6 +71,13 @@ end
 
 function run_httpclnt()
     println("starting http rpc tests.")
+
+    resp = get("http://localhost:8888/")
+    @test resp.status == 404
+
+    resp = get("http://localhost:8888/invalidapi")
+    @test resp.status == 404
+
     resp = JSON.parse(readall(get("http://localhost:8888/testfn1/1/2")))
     @test resp["code"] == 0
     @test resp["data"] == 5
@@ -86,6 +93,10 @@ function run_httpclnt()
     resp = JSON.parse(readall(post("http://localhost:8888/testFile"; headers=headers, data=postdata)))
     @test resp["code"] == 0
     @test resp["data"] == "5,446"
+
+    println("testing preprocessor...")
+    resp = get("http://localhost:8888/testfn1/1/2"; headers = Dict("juliawebapi"=>"404"))
+    @test resp.status == 404
 
     println("finished http rpc tests.")
 end
