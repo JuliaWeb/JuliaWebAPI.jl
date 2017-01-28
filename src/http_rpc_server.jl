@@ -149,6 +149,7 @@ function http_handler(api::APIInvoker, preproc::Function, req::Request, res::Res
             res = Response(404)
         else
             if preproc(req, res)
+                comps = split(req.resource, '?', limit=2, keep=false)
                 path = shift!(comps)
                 data_dict = isempty(comps) ? Dict{Compat.UTF8String,Compat.UTF8String}() : parsequerystring(comps[1])
                 multipart_boundary = get_multipart_form_boundary(req)
