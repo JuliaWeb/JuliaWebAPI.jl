@@ -12,7 +12,14 @@ Bundled with the package are implementations for:
 - JSONMsgFormat: JSON as message format
 - SerializedMsgFormat: Julia serialization as message format
 
-Combined with [JuliaBox](https://juliabox.org/), it helps deploy Julia packages and code snippets as publicly hosted, auto-scaling HTTP APIs.
+Combined with a HTTP/Messaging frontend (like [JuliaBox](https://github.com/JuliaCloud/JuliaBox)), it helps deploy Julia packages and code snippets as hosted, auto-scaling HTTP APIs.
+
+Some amount of basic request filtering and pre-processing is possible by registering a pre-processor with the HTTP frontend.
+The pre-processor is run at the HTTP server side, where it has access to the complete request. It can examine headers and data and take decision
+whether to allow calling the service or respond directly and immediately. It can also rewrite the request before passing it on to the service.
+
+A pre-processor can be used to implement features like authentication, request rewriting and such. See example below.
+
 
 ## Example Usage
 
@@ -58,6 +65,20 @@ This will return the following JSON response to your browser, which is the resul
 `{"data"=>44,"code"=>0}`
 
 
+Example of an authentication filter implemented using a pre-processor:
+
+````
+function auth_preproc(req::Request, res::Response)
+    if !validate(req)
+        res.status = 401
+        return false
+    end
+    return true
+end
+run_http(apiclnt, 8888, auth_preproc)
+````
+
+
 ## JuliaBox Deployment
 
 Deploying on JuliaBox takes care of most of the boilerplate code. To expose a simple fibonacci generator on JuliaBox, paste the following 
@@ -73,3 +94,5 @@ for requests. The obvious packages are aleady imported.
 
 The JuliaBox API command must however be concisely expressed within 512 bytes without new lines. To run larger applications, simply package up the 
 code as a Julia package and install the package as part of the command. For an example, see the [Juliaset API package](https://github.com/tanmaykm/Juliaset.jl).
+
+Note: A [JuliaBox](https://github.com/JuliaCloud/JuliaBox) deployment may or may not have this enabled, depending on how it has been configured.
