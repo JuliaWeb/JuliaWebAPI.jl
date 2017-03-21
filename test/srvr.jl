@@ -31,6 +31,7 @@ function run_srvr(format=:json, async=false)
         Logging.info("queue is at $SRVR_ADDR")
 
         api = APIResponder(ZMQTransport(SRVR_ADDR, REP, true), fmt)
+        Logging.info("responding with: $api")
 
         register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
         register(api, testfn2)

@@ -22,7 +22,8 @@ end
 function run_clnt(format=:json)
     ctx = Context()
     fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
-    apiclnt = APIInvoker(ZMQTransport("tcp://127.0.0.1:9999", REQ, false, ctx), fmt)
+    tport = ZMQTransport("127.0.0.1", 9999, REQ, false, ctx)
+    apiclnt = APIInvoker(tport, fmt)
 
     println("testing httpresponse...")
     resp = apicall(apiclnt, "testfn1", 1, 2, narg1=3, narg2=4)
@@ -67,6 +68,7 @@ function run_clnt(format=:json)
     @test fnresponse(apiclnt.format, resp) == 12
 
     close(ctx)
+    close(tport)
 end
 
 function run_httpclnt()
