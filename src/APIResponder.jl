@@ -1,4 +1,4 @@
-abstract AbstractAPIResponder
+@compat abstract type AbstractAPIResponder end
 
 immutable APISpec
     fn::Function
@@ -6,7 +6,7 @@ immutable APISpec
     resp_headers::Dict{Compat.UTF8String,Compat.UTF8String}
 end
 
-typealias EndPts Dict{Compat.UTF8String,APISpec}
+@compat const EndPts = Dict{Compat.UTF8String,APISpec}
 
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.

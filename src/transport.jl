@@ -1,4 +1,4 @@
-abstract AbstractTransport
+@compat abstract type AbstractTransport end
 
 """Transport layer over ZMQ sockets"""
 immutable ZMQTransport <: AbstractTransport

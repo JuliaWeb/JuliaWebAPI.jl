@@ -1,4 +1,4 @@
-abstract AbstractMsgFormat
+@compat abstract type AbstractMsgFormat end
 
 """
 Intermediate format based on JSON.
