@@ -6,7 +6,7 @@ immutable APISpec
     resp_headers::Dict{Compat.UTF8String,Compat.UTF8String}
 end
 
-@compat const EndPts = Dict{Compat.UTF8String,APISpec}
+const EndPts = Dict{Compat.UTF8String,APISpec}
 
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
