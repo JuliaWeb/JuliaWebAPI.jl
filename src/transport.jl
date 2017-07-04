@@ -21,7 +21,7 @@ end
 
 function sendrecv(conn::ZMQTransport, msgstr)
     Logging.debug("sending request: ", msgstr)
-    ZMQ.send(conn.sock, Message(msgstr))
+    ZMQ.send(conn.sock, ZMQ.Message(msgstr))
     respstr = unsafe_string(ZMQ.recv(conn.sock))
     Logging.debug("received response: ", respstr)
     respstr
@@ -29,7 +29,7 @@ end
 
 function sendresp(conn::ZMQTransport, msgstr)
     Logging.debug("sending response: ", msgstr)
-    ZMQ.send(conn.sock, Message(msgstr))
+    ZMQ.send(conn.sock, ZMQ.Message(msgstr))
 end
 
 function recvreq(conn::ZMQTransport)

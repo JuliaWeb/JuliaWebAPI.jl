@@ -5,8 +5,8 @@ include("srvr.jl")
 include("clnt.jl")
 
 function test_serialized_msgformat()
-    run_srvr(:serialized, true)
-    run_clnt(:serialized)
+    run_srvr(JuliaWebAPI.SerializedMsgFormat(), JuliaWebAPI.ZMQTransport(SRVR_ADDR, ZMQ.REP, true), true)
+    run_clnt(JuliaWebAPI.SerializedMsgFormat(), JuliaWebAPI.ZMQTransport("127.0.0.1", 9999, ZMQ.REQ, false))
 end
 
 # run tests if invoked with run flag
