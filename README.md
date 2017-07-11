@@ -3,14 +3,16 @@
 [![Build Status](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl.svg?branch=master)](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaWeb/JuliaWebAPI.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaWeb/JuliaWebAPI.jl?branch=master)
 
-Facilitates wrapping Julia functions into a remote callable API via message queues (e.g. ZMQ) and HTTP.
+Facilitates wrapping Julia functions into a remote callable API via message queues (e.g. ZMQ, RabbitMQ) and HTTP.
 
 It can plug in to a different messaging infrastructure through an implementation of transport (`AbstractTransport`) and message format (`AbstractMsgFormat`).
 Multiple instances of the front (HTTP API) and back (Julia methods) end can help scale an application.
 Bundled with the package are implementations for:
 - ZMQTransport: use ZMQ for transport
+- InProcTransport: use Julia `Channel` for transport within the same process
 - JSONMsgFormat: JSON as message format
 - SerializedMsgFormat: Julia serialization as message format
+- DictMsgFormat: Julia `Dict` as message format, for use within the same process
 
 Combined with a HTTP/Messaging frontend (like [JuliaBox](https://github.com/JuliaCloud/JuliaBox)), it helps deploy Julia packages and code snippets as hosted, auto-scaling HTTP APIs.
 

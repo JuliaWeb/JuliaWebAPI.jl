@@ -11,8 +11,8 @@ using Compat
 
 import Base: close
 
-export AbstractMsgFormat, JSONMsgFormat, SerializedMsgFormat
-export AbstractTransport, ZMQTransport, close
+export AbstractMsgFormat, JSONMsgFormat, SerializedMsgFormat, DictMsgFormat
+export AbstractTransport, ZMQTransport, InProcTransport, close
 export AbstractAPIResponder, APIResponder, EndPts, APISpec, register, process, process_async
 export AbstractAPIInvoker, APIInvoker, apicall, httpresponse, fnresponse, run_rest, run_http
 

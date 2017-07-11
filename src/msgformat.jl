@@ -10,18 +10,6 @@ end
 wireformat(fmt::JSONMsgFormat, cmd::Compat.String, args...; data...) = JSON.json(_dict_fmt(cmd, args...; data...))
 wireformat(fmt::JSONMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing) = JSON.json(_dict_fmt(code, headers, resp, id))
 juliaformat(fmt::JSONMsgFormat, msgstr) = JSON.parse(msgstr)
-cmd(fmt::JSONMsgFormat, msg) = get(msg, "cmd", "")
-args(fmt::JSONMsgFormat, msg) = get(msg, "args", [])
-data(fmt::JSONMsgFormat, msg) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
-
-"""construct an HTTP Response object from the API response"""
-httpresponse(fmt::JSONMsgFormat, resp) = _dict_httpresponse(resp)
-
-"""
-extract and return the response data as a direct function call would have returned
-but throw error if the call was not successful.
-"""
-fnresponse(fmt::JSONMsgFormat, resp) = _dict_fnresponse(resp)
 
 """
 Intermediate format based on Julia serialization.
@@ -33,18 +21,33 @@ end
 wireformat(fmt::SerializedMsgFormat, cmd::Compat.String, args...; data...) = _dict_ser(_dict_fmt(cmd, args...; data...))
 wireformat(fmt::SerializedMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing) = _dict_ser(_dict_fmt(code, headers, resp, id))
 juliaformat(fmt::SerializedMsgFormat, msgstr) = _dict_dser(msgstr)
-cmd(fmt::SerializedMsgFormat, msg) = get(msg, "cmd", "")
-args(fmt::SerializedMsgFormat, msg) = get(msg, "args", [])
-data(fmt::SerializedMsgFormat, msg) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
 
-"""construct an HTTP Response object from the API response"""
-httpresponse(fmt::SerializedMsgFormat, resp) = _dict_httpresponse(resp)
+"""
+Intermediate format that is just a Dict. No serialization.
+A Dict with `cmd` (string), `args` (array), `vargs` (dict).
+"""
+immutable DictMsgFormat <: AbstractMsgFormat
+end
+
+wireformat(fmt::DictMsgFormat, cmd::Compat.String, args...; data...) = _dict_fmt(cmd, args...; data...)
+wireformat(fmt::DictMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing) = _dict_fmt(code, headers, resp, id)
+juliaformat(fmt::DictMsgFormat, msg) = msg
+
+##############################################
+# common interface methods for message formats
+##############################################
+cmd(fmt::AbstractMsgFormat, msg) = get(msg, "cmd", "")
+args(fmt::AbstractMsgFormat, msg) = get(msg, "args", [])
+data(fmt::AbstractMsgFormat, msg) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
 
 """
 extract and return the response data as a direct function call would have returned
 but throw error if the call was not successful.
 """
-fnresponse(fmt::SerializedMsgFormat, resp) = _dict_fnresponse(resp)
+fnresponse(fmt::AbstractMsgFormat, resp) = _dict_fnresponse(resp)
+
+"""construct an HTTP Response object from the API response"""
+httpresponse(fmt::AbstractMsgFormat, resp) = _dict_httpresponse(resp)
 
 ##############################################
 # common utility methods for message formats
