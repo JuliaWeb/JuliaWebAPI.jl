@@ -4,7 +4,7 @@ using Logging
 using GZip
 
 const CONTENT_DISPOSITION_TEMPLATE = "attachment; filename="
-const FILE_DOWNLOAD_HDR = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/octet-stream", "Content-Disposition" => "")
+const FILE_DOWNLOAD_HDR = Dict{String,String}("Content-Type" => "application/octet-stream", "Content-Disposition" => "")
 
 function filebytes(filename)
     open(filename, "r") do fp

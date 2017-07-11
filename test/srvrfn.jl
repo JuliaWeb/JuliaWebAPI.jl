@@ -9,7 +9,7 @@ function testfn1(arg1, arg2; narg1=1, narg2=2)
 end
 testfn2(arg1, arg2; narg1=1, narg2=2) = testfn1(arg1, arg2; narg1=narg1, narg2=narg2)
 
-testbinary(datalen::Compat.String) = testbinary(parse(Int,datalen))
+testbinary(datalen::String) = testbinary(parse(Int,datalen))
 testbinary(datalen::Int) = rand(UInt8, datalen)
 
 testArray(x::Array{Float64, 2}) = sum(x) + x[1,2]

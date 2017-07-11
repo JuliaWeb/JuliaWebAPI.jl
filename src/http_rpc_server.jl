@@ -22,9 +22,9 @@ function parsepostdata(req, query)
         if !isempty(req.data)
             idx = findfirst(req.data, UInt8('\0'))
             idx = (idx == 0) ? endof(req.data) : (idx - 1)
-            post_data = Compat.String(req.data[1:idx])
+            post_data = String(req.data[1:idx])
         end
-    elseif isa(req.data, Compat.UTF8String)
+    elseif isa(req.data, String)
         post_data = req.data
     end
     
@@ -82,7 +82,7 @@ function parsepostdata(req, data_dict, multipart_boundary)
             hdrloc = (first(hdrloc1) < first(hdrloc2)) ? hdrloc1 : hdrloc2
         end
 
-        parthdr = Compat.String(part[1:(first(hdrloc)-1)])
+        parthdr = String(part[1:(first(hdrloc)-1)])
         partdata = part[(last(hdrloc)+1):end]
 
         collect_part_data(data_dict, parthdr, partdata)
@@ -151,7 +151,7 @@ function http_handler(api::APIInvoker, preproc::Function, req::Request, res::Res
             if preproc(req, res)
                 comps = split(req.resource, '?', limit=2, keep=false)
                 path = shift!(comps)
-                data_dict = isempty(comps) ? Dict{Compat.UTF8String,Compat.UTF8String}() : parsequerystring(comps[1])
+                data_dict = isempty(comps) ? Dict{String,String}() : parsequerystring(comps[1])
                 multipart_boundary = get_multipart_form_boundary(req)
                 if multipart_boundary === nothing
                     data_dict = parsepostdata(req, data_dict)
