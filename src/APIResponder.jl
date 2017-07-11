@@ -174,11 +174,13 @@ function setup_logging(;log_level=INFO, nid::Compat.String=get(ENV,"JBAPI_CID","
 end
 
 function process_async(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), open::Bool=false)
+    Base.depwarn("processs_async is deprecated, use process(conn::APIResponder; async::Bool=true) instead", :process)
     process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, open=open, async=true)
 end
 
 function process(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
                 bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), open::Bool=false, async::Bool=false)
+    Base.depwarn("processs(apispecs::Array,...) is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
     api = create_responder(apispecs, addr, bind, Compat.UTF8String(nid),open)
@@ -204,6 +206,7 @@ function create_responder(apispecs::Array, addr, bind, nid, open=false)
 end
 
 function process()
+    Base.depwarn("process() is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
     log_level = Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO"))
     setup_logging(;log_level=log_level)
 
