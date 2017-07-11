@@ -5,8 +5,8 @@ include("srvr.jl")
 include("clnt.jl")
 
 function test_asyncsrvr()
-    run_srvr(:json, true)
-    run_clnt(:json)
+    run_srvr(JuliaWebAPI.JSONMsgFormat(), JuliaWebAPI.ZMQTransport(SRVR_ADDR, ZMQ.REP, true), true)
+    run_clnt(JuliaWebAPI.JSONMsgFormat(), JuliaWebAPI.ZMQTransport("127.0.0.1", 9999, ZMQ.REQ, false))
 end
 
 # run tests if invoked with run flag

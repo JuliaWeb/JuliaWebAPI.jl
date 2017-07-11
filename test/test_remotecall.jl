@@ -13,7 +13,6 @@ const cov_flag = (opts.code_coverage == 1) ? `--code-coverage=user` :
 
 function addproc_srvr()
     addprocs(1; exeflags=`$cov_flag $inline_flag`)
-    @spawnat 2 ()->(include("srvrfn.jl"); run_srvr())
 end
 
 function rmproc_srvr()

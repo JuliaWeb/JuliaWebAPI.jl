@@ -19,10 +19,8 @@ function printresp(apiclnt, testname, resp)
     println("\t\thdrs: $(hresp.headers)")
 end
 
-function run_clnt(format=:json)
+function run_clnt(fmt, tport)
     ctx = Context()
-    fmt = (format == :json) ? JSONMsgFormat() : SerializedMsgFormat()
-    tport = ZMQTransport("127.0.0.1", 9999, REQ, false, ctx)
     apiclnt = APIInvoker(tport, fmt)
 
     println("testing httpresponse...")
@@ -103,5 +101,5 @@ function run_httpclnt()
 end
 
 # run client if invoked with run flag
-!isempty(ARGS) && (ARGS[1] == "--runclnt") && run_clnt()
+!isempty(ARGS) && (ARGS[1] == "--runclnt") && run_clnt(JuliaWebAPI.JSONMsgFormat(), JuliaWebAPI.ZMQTransport("127.0.0.1", 9999, ZMQ.REQ, false, ctx))
 !isempty(ARGS) && (ARGS[1] == "--runhttpclnt") && run_httpclnt()
