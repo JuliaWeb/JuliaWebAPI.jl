@@ -10,8 +10,8 @@ using ZMQ
 include("srvrfn.jl")
 
 const SRVR_ADDR = "tcp://127.0.0.1:9999"
-const JSON_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/json; charset=utf-8")
-const BINARY_RESP_HDRS = Dict{Compat.UTF8String,Compat.UTF8String}("Content-Type" => "application/octet-stream")
+const JSON_RESP_HDRS = Dict{String,String}("Content-Type" => "application/json; charset=utf-8")
+const BINARY_RESP_HDRS = Dict{String,String}("Content-Type" => "application/octet-stream")
 
 function run_srvr(fmt, tport, async=false)
     Logging.configure(level=INFO, filename="apisrvr_test.log")

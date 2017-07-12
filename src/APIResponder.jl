@@ -3,10 +3,10 @@
 immutable APISpec
     fn::Function
     resp_json::Bool
-    resp_headers::Dict{Compat.UTF8String,Compat.UTF8String}
+    resp_headers::Dict{String,String}
 end
 
-const EndPts = Dict{Compat.UTF8String,APISpec}
+const EndPts = Dict{String,APISpec}
 
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
@@ -14,19 +14,19 @@ APIResponder holds the transport and format used for data exchange and the endpo
 immutable APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
     transport::T
     format::F
-    id::Union{Void,Compat.UTF8String}  # optional responder id to be sent back
+    id::Union{Void,String}  # optional responder id to be sent back
     open::Bool  #whether the responder will process all functions, or only registered ones
     endpoints::EndPts
 end
 
-APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}(transport::T, format::F, id::Union{Void,Compat.UTF8String}=nothing, open::Bool=false) = APIResponder(transport, format, id, open, EndPts())
+APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}(transport::T, format::F, id::Union{Void,String}=nothing, open::Bool=false) = APIResponder(transport, format, id, open, EndPts())
 
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
 This method creates an APIResponder over ZMQ transport using JSON message format.
 (provided for backward compatibility)
 """
-APIResponder(addr::Compat.String, ctx::Context=Context(), bound::Bool=true, id=nothing, open=false) = APIResponder(ZMQTransport(addr, REP, bound, ctx), JSONMsgFormat(), id, open, EndPts())
+APIResponder(addr::String, ctx::Context=Context(), bound::Bool=true, id=nothing, open=false) = APIResponder(ZMQTransport(addr, REP, bound, ctx), JSONMsgFormat(), id, open, EndPts())
 APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
 
 function Base.show(io::IO, x::APIResponder)
@@ -49,7 +49,7 @@ TODO: validate method belongs to module?
 """
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
-                  resp_headers::Dict=Dict{Compat.UTF8String,Compat.UTF8String}(), endpt=default_endpoint(f))
+                  resp_headers::Dict=Dict{String,String}(), endpt=default_endpoint(f))
     Logging.debug("registering endpoint [$endpt]")
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn # make fluent api possible
@@ -64,7 +64,7 @@ end
 respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp=nothing) =
     respond(conn, ERR_CODES[status][1], get_hdrs(api), get_resp(api, status, resp))
 
-get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{Compat.UTF8String,Compat.UTF8String}()
+get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{String,String}()
 
 function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
     st = ERR_CODES[status]
@@ -72,7 +72,7 @@ function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
     stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
 
     if !isnull(api) && get(api).resp_json
-        return Dict{Compat.UTF8String, Any}("code"=>stcode, "data"=>stresp)
+        return Dict{String, Any}("code"=>stcode, "data"=>stresp)
     else
         return stresp
     end
@@ -104,11 +104,7 @@ Further, since JSON does not have true multidimensional arrays, they are
 transmitted as arrays containing arrays. This function will convert them to
 a true multidimensional array in Julia.
 =#
-if VERSION < v"0.5.0-dev+3294"
-    promote_arr(x) = Base.map_promote(identity, x)
-else
-    promote_arr(x) = Base.collect_to!(similar(x, typeof(x[1])), x, 1, 1)
-end
+promote_arr(x) = Base.collect_to!(similar(x, typeof(x[1])), x, 1, 1)
 
 function narrow_args!(x)
     for (i, v) in enumerate(x)
@@ -167,32 +163,32 @@ function process(conn::APIResponder; async::Bool=false)
     conn
 end
 
-function setup_logging(;log_level=INFO, nid::Compat.String=get(ENV,"JBAPI_CID",""))
+function setup_logging(;log_level=INFO, nid::String=get(ENV,"JBAPI_CID",""))
     api_name = get(ENV,"JBAPI_NAME", "noname")
     logfile = "apisrvr_$(api_name)_$(nid).log"
     Logging.configure(level=log_level, filename=logfile)
 end
 
-function process_async(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), open::Bool=false)
+function process_async(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::String=get(ENV,"JBAPI_CID",""), open::Bool=false)
     Base.depwarn("processs_async is deprecated, use process(conn::APIResponder; async::Bool=true) instead", :process)
     process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, open=open, async=true)
 end
 
-function process(apispecs::Array, addr::Compat.String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
-                bind::Bool=false, nid::Compat.String=get(ENV,"JBAPI_CID",""), open::Bool=false, async::Bool=false)
+function process(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
+                bind::Bool=false, nid::String=get(ENV,"JBAPI_CID",""), open::Bool=false, async::Bool=false)
     Base.depwarn("processs(apispecs::Array,...) is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
     setup_logging(;log_level=log_level)
     Logging.debug("queue is at $addr")
-    api = create_responder(apispecs, addr, bind, Compat.UTF8String(nid),open)
+    api = create_responder(apispecs, addr, bind, nid, open)
     process(api; async=async)
 end
 
-_add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{Compat.UTF8String,Compat.UTF8String}())
+_add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{String,String}())
 
 function _add_spec(spec::Tuple, api::APIResponder)
     fn = spec[1]
     resp_json = (length(spec) > 1) ? spec[2] : false
-    resp_headers = (length(spec) > 2) ? spec[3] : Dict{Compat.UTF8String,Compat.UTF8String}()
+    resp_headers = (length(spec) > 2) ? spec[3] : Dict{String,String}()
     api_name = (length(spec) > 3) ? spec[4] : default_endpoint(fn)
     register(api, fn, resp_json=resp_json, resp_headers=resp_headers, endpt=api_name)
 end

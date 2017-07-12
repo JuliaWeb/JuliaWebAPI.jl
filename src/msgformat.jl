@@ -7,8 +7,8 @@ A JSON object with `cmd` (string), `args` (array), `vargs` (dict).
 immutable JSONMsgFormat <: AbstractMsgFormat
 end
 
-wireformat(fmt::JSONMsgFormat, cmd::Compat.String, args...; data...) = JSON.json(_dict_fmt(cmd, args...; data...))
-wireformat(fmt::JSONMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing) = JSON.json(_dict_fmt(code, headers, resp, id))
+wireformat(fmt::JSONMsgFormat, cmd::String, args...; data...) = JSON.json(_dict_fmt(cmd, args...; data...))
+wireformat(fmt::JSONMsgFormat, code::Int, headers::Dict{String,String}, resp, id=nothing) = JSON.json(_dict_fmt(code, headers, resp, id))
 juliaformat(fmt::JSONMsgFormat, msgstr) = JSON.parse(msgstr)
 
 """
@@ -18,8 +18,8 @@ A dict with `cmd` (string), `args` (array), `vargs` (dict).
 immutable SerializedMsgFormat <: AbstractMsgFormat
 end
 
-wireformat(fmt::SerializedMsgFormat, cmd::Compat.String, args...; data...) = _dict_ser(_dict_fmt(cmd, args...; data...))
-wireformat(fmt::SerializedMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing) = _dict_ser(_dict_fmt(code, headers, resp, id))
+wireformat(fmt::SerializedMsgFormat, cmd::String, args...; data...) = _dict_ser(_dict_fmt(cmd, args...; data...))
+wireformat(fmt::SerializedMsgFormat, code::Int, headers::Dict{String,String}, resp, id=nothing) = _dict_ser(_dict_fmt(code, headers, resp, id))
 juliaformat(fmt::SerializedMsgFormat, msgstr) = _dict_dser(msgstr)
 
 """
@@ -29,8 +29,8 @@ A Dict with `cmd` (string), `args` (array), `vargs` (dict).
 immutable DictMsgFormat <: AbstractMsgFormat
 end
 
-wireformat(fmt::DictMsgFormat, cmd::Compat.String, args...; data...) = _dict_fmt(cmd, args...; data...)
-wireformat(fmt::DictMsgFormat, code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing) = _dict_fmt(code, headers, resp, id)
+wireformat(fmt::DictMsgFormat, cmd::String, args...; data...) = _dict_fmt(cmd, args...; data...)
+wireformat(fmt::DictMsgFormat, code::Int, headers::Dict{String,String}, resp, id=nothing) = _dict_fmt(code, headers, resp, id)
 juliaformat(fmt::DictMsgFormat, msg) = msg
 
 ##############################################
@@ -67,8 +67,8 @@ function _dict_ser(d)
 end
 _dict_dser(b) = deserialize(IOBuffer(b))
 
-function _dict_fmt(cmd::Compat.String, args...; data...)
-    req = Dict{Compat.UTF8String,Any}()
+function _dict_fmt(cmd::String, args...; data...)
+    req = Dict{String,Any}()
 
     req["cmd"] = cmd
     isempty(args) || (req["args"] = args)
@@ -76,8 +76,8 @@ function _dict_fmt(cmd::Compat.String, args...; data...)
     req
 end
 
-function _dict_fmt(code::Int, headers::Dict{Compat.UTF8String,Compat.UTF8String}, resp, id=nothing)
-    msg = Dict{Compat.UTF8String,Any}()
+function _dict_fmt(code::Int, headers::Dict{String,String}, resp, id=nothing)
+    msg = Dict{String,Any}()
 
     (id == nothing) || (msg["nid"] = id)
 
