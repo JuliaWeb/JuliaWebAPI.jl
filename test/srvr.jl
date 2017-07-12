@@ -49,6 +49,19 @@ function run_httprpcsrvr(fmt, tport, async=false)
     end
 end
 
+function wait_for_httpsrvr()
+    while true
+        try
+            sock = connect("localhost", 8888)
+            close(sock)
+            return
+        catch
+            Logging.info("waiting for httpserver to come up at port 8888...")
+            sleep(5)
+        end
+    end
+end
+
 # run in blocking mode if invoked with run flag
 !isempty(ARGS) && (ARGS[1] == "--runsrvr") && run_srvr(JuliaWebAPI.JSONMsgFormat(), JuliaWebAPI.ZMQTransport(SRVR_ADDR, ZMQ.REP, true), false)
 
