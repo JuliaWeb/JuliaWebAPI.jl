@@ -78,13 +78,23 @@ function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
     end
 end
 
+# Note: needs to be changed when https://github.com/JuliaLang/julia/pull/22646 is merged
+function dynamic_invoke(conn::APIResponder, f, args...; kwargs...)
+    if conn.open && isdefined(Core, :_apply_latest)
+        inner() = f(args...; kwargs...)
+        Core._apply_latest(inner)
+    else
+        f(args...; kwargs...)
+    end
+end
+
 """call the actual API method, and send the return value back as response"""
 function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any})
     try
         if !applicable(api.fn, args...)
             narrow_args!(args)
         end
-        result = api.fn(args...; data...)
+        result = dynamic_invoke(conn, api.fn, args...; data...)
         respond(conn, Nullable(api), :success, result)
     catch ex
         err("api_exception: $ex")

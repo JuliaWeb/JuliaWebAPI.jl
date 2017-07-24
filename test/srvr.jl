@@ -13,11 +13,11 @@ const SRVR_ADDR = "tcp://127.0.0.1:9999"
 const JSON_RESP_HDRS = Dict{String,String}("Content-Type" => "application/json; charset=utf-8")
 const BINARY_RESP_HDRS = Dict{String,String}("Content-Type" => "application/octet-stream")
 
-function run_srvr(fmt, tport, async=false)
+function run_srvr(fmt, tport, async=false, open=false)
     Logging.configure(level=INFO, filename="apisrvr_test.log")
     Logging.info("queue is at $SRVR_ADDR")
 
-    api = APIResponder(tport, fmt)
+    api = APIResponder(tport, fmt, nothing, open)
     Logging.info("responding with: $api")
 
     register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
@@ -40,7 +40,7 @@ function test_preproc(req::Request, res::Response)
 end
 
 function run_httprpcsrvr(fmt, tport, async=false)
-    run_srvr(fmt, tport, true)
+    run_srvr(fmt, tport, true, true)
     apiclnt = APIInvoker(ZMQTransport(SRVR_ADDR, REQ, false), fmt)
     if async
         @async run_http(apiclnt, 8888, test_preproc)
