@@ -140,7 +140,7 @@ function get_multipart_form_boundary(req::Request)
     parts[2]
 end
 
-function http_handler(api::APIInvoker, preproc::Function, req::Request, res::Response)
+function http_handler{T,F}(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::Request, res::Response)
     Logging.info("processing request ", req)
     
     try
@@ -164,13 +164,19 @@ function http_handler(api::APIInvoker, preproc::Function, req::Request, res::Res
                     res = Response(404)
                 else
                     cmd = shift!(args)
-                    if isempty(data_dict)
-                        Logging.debug("calling cmd ", cmd, ", with args ", args)
-                        res = httpresponse(api.format, apicall(api, cmd, args...))
-                    else
-                        vargs = make_vargs(data_dict)
-                        Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
-                        res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
+                    Logging.info("waiting for a handler")
+                    api = take!(apis)
+                    try
+                        if isempty(data_dict)
+                            Logging.debug("calling cmd ", cmd, ", with args ", args)
+                            res = httpresponse(api.format, apicall(api, cmd, args...))
+                        else
+                            vargs = make_vargs(data_dict)
+                            Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
+                            res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
+                        end
+                    finally
+                        put!(apis, api)
                     end
                 end
             end
@@ -190,29 +196,33 @@ on_listen(port) = Logging.info("listening on port ", port, "...")
 default_preproc(req::Request, res::Response) = true
 
 # add a multipart form handler, provide default
-type HttpRpcServer
-    api::APIInvoker
+immutable HttpRpcServer{T,F}
+    api::Channel{APIInvoker{T,F}}
     handler::HttpHandler
     server::Server
-
-    function HttpRpcServer(api::APIInvoker, preproc::Function=default_preproc)
-        r = new()
-
-        function handler(req::Request, res::Response)
-            return http_handler(api, preproc, req, res)
-        end
-
-        r.api = api
-        r.handler = HttpHandler(handler)
-        r.handler.events["error"] = on_error
-        r.handler.events["listen"] = on_listen
-        r.server = Server(r.handler)
-        r
-    end
 end
 
-run_http(api::APIInvoker, port::Int, preproc::Function=default_preproc) = run_http(api, preproc; port=port)
-function run_http(api::APIInvoker, preproc::Function=default_preproc; kwargs...)
+HttpRpcServer{T,F}(api::APIInvoker{T,F}, preproc::Function=default_preproc) = HttpRpcServer([api], preproc)
+function HttpRpcServer{T,F}(apis::Vector{APIInvoker{T,F}}, preproc::Function=default_preproc)
+    api = Channel{APIInvoker{T,F}}(length(apis))
+    for member in apis
+        put!(api, member)
+    end
+
+    function handler(req::Request, res::Response)
+        return http_handler(api, preproc, req, res)
+    end
+
+    handler = HttpHandler(handler)
+    handler.events["error"] = on_error
+    handler.events["listen"] = on_listen
+    server = Server(handler)
+
+    HttpRpcServer{T,F}(api, handler, server)
+end
+
+run_http{T,F}(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc) = run_http(api, preproc; port=port)
+function run_http{T,F}(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, preproc::Function=default_preproc; kwargs...)
     Logging.debug("running HTTP RPC server...")
     httprpc = HttpRpcServer(api, preproc)
     run(httprpc.server; kwargs...)
