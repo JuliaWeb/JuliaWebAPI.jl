@@ -90,8 +90,8 @@ end
 
 """call the actual API method, and send the return value back as response"""
 function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any})
-    try
-        if !applicable(api.fn, args...)
+    try       
+        if !applicable(api.fn, args...) || ((api.fn === (*) || api.fn === (/) || api.fn === (\)) && all(x->isa(x,Vector), args))
             narrow_args!(args)
         end
         result = dynamic_invoke(conn, api.fn, args...; data...)
