@@ -97,7 +97,7 @@ function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any}
         result = dynamic_invoke(conn, api.fn, args...; data...)
         respond(conn, Nullable(api), :success, result)
     catch ex
-        err("api_exception: $ex")
+        logerr("api_exception: ", ex)
         respond(conn, Nullable(api), :api_exception)
     end
 end
@@ -163,7 +163,7 @@ function process(conn::APIResponder; async::Bool=false)
             try
                 call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
             catch ex
-                err("exception ", ex)
+                logerr("exception ", ex)
                 respond(conn, Nullable(conn.endpoints[command]), :invalid_data)
             end
         end
@@ -226,4 +226,11 @@ function process()
     cmd = get(ENV,"JBAPI_CMD","")
     eval(parse(cmd))
     nothing
+end
+
+function logerr(msg, ex)
+    iob = IOBuffer()
+    write(iob, msg)
+    showerror(iob, ex)
+    err(String(take!(iob)))
 end
