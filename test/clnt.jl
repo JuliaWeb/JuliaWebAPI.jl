@@ -60,10 +60,15 @@ function run_clnt(fmt, tport)
     t = toc();
     println("time for $NCALLS calls to testbinary: $t secs @ $(t/NCALLS) per call")
 
-    #Test Array invocation
-
+    # Test Array invocation
     resp = apicall(apiclnt, "testArray", Float64[1.0 2.0; 3.0 4.0])
     @test fnresponse(apiclnt.format, resp) == 12
+
+    # Test unknown function call
+    resp = apicall(apiclnt, "testNoSuchMethod", Float64[1.0 2.0; 3.0 4.0])
+    @test resp["code"] == 404
+    resp = apicall(apiclnt, "testArray", "no such argument")
+    @test resp["code"] == 500
 
     close(ctx)
     close(tport)

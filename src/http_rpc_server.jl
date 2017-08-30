@@ -158,7 +158,7 @@ function http_handler{T,F}(apis::Channel{APIInvoker{T,F}}, preproc::Function, re
                 else
                     data_dict = parsepostdata(req, data_dict, multipart_boundary)
                 end
-                args = split(path, '/', keep=false)
+                args = map(String, split(path, '/', keep=false))
 
                 if isempty(args) || !isvalidcmd(args[1])
                     res = Response(404)
