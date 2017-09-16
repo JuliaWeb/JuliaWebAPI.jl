@@ -25,6 +25,7 @@ function run_srvr(fmt, tport, async=false, open=false)
     register(api, testbinary; resp_headers=BINARY_RESP_HDRS)
     register(api, testArray)
     register(api, testFile; resp_json=true, resp_headers=JSON_RESP_HDRS)
+    register(api, testException; resp_json=true, resp_headers=JSON_RESP_HDRS)
 
     process(api; async=async)
 end

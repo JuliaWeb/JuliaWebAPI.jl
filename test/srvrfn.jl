@@ -21,3 +21,5 @@ function testFile(;filename=nothing, filedata=nothing)
     #println("[", String(filedata), "]")
     string(length(filename)) * "," * string(length(filedata))
 end
+
+testException() = error("testing exception handling")

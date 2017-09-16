@@ -61,14 +61,23 @@ function run_clnt(fmt, tport)
     println("time for $NCALLS calls to testbinary: $t secs @ $(t/NCALLS) per call")
 
     # Test Array invocation
+    println("testing array invocation...")
     resp = apicall(apiclnt, "testArray", Float64[1.0 2.0; 3.0 4.0])
     @test fnresponse(apiclnt.format, resp) == 12
 
     # Test unknown function call
+    println("testing unknown method handling...")
     resp = apicall(apiclnt, "testNoSuchMethod", Float64[1.0 2.0; 3.0 4.0])
     @test resp["code"] == 404
     resp = apicall(apiclnt, "testArray", "no such argument")
     @test resp["code"] == 500
+    @test contains(resp["data"], "MethodError")
+
+    # Test exceptions
+    println("testing server method exception handling...")
+    resp = apicall(apiclnt, "testException")
+    @test resp["code"] == 500
+    @test contains(resp["data"]["data"], "testing exception handling")
 
     close(ctx)
     close(tport)

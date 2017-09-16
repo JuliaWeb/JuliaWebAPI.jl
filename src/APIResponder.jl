@@ -98,7 +98,7 @@ function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any}
         respond(conn, Nullable(api), :success, result)
     catch ex
         logerr("api_exception: ", ex)
-        respond(conn, Nullable(api), :api_exception)
+        respond(conn, Nullable(api), :api_exception, string(ex))
     end
 end
 
