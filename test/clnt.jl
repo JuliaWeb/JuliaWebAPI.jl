@@ -6,6 +6,7 @@ using Logging
 using ZMQ
 using Base.Test
 using Requests
+using JSON
 
 Logging.configure(level=INFO)
 

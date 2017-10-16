@@ -202,6 +202,22 @@ immutable HttpRpcServer{T,F}
     server::Server
 end
 
+function reusable_tcpserver()
+    tcp = Base.TCPServer(Base.Libc.malloc(Base._sizeof_uv_tcp), Base.StatusUninit)
+    err = ccall(:uv_tcp_init_ex, Cint, (Ptr{Void}, Ptr{Void}, Cuint),
+                Base.eventloop(), tcp.handle, 2)
+    Base.uv_error("failed to create tcp server", err)
+    tcp.status = Base.StatusInit
+
+    rc = ccall(:jl_tcp_reuseport, Int32, (Ptr{Void},), tcp.handle)
+    if rc == 0
+        Logging.info("Reusing TCP port")
+    else
+        Logging.warn("Unable to reuse TCP port, error:", rc)
+    end
+    return tcp
+end
+
 HttpRpcServer{T,F}(api::APIInvoker{T,F}, preproc::Function=default_preproc) = HttpRpcServer([api], preproc)
 function HttpRpcServer{T,F}(apis::Vector{APIInvoker{T,F}}, preproc::Function=default_preproc)
     api = Channel{APIInvoker{T,F}}(length(apis))
@@ -213,7 +229,7 @@ function HttpRpcServer{T,F}(apis::Vector{APIInvoker{T,F}}, preproc::Function=def
         return http_handler(api, preproc, req, res)
     end
 
-    handler = HttpHandler(handler)
+    handler = HttpHandler(handler, reusable_tcpserver())
     handler.events["error"] = on_error
     handler.events["listen"] = on_listen
     server = Server(handler)
