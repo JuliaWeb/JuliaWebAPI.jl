@@ -6,6 +6,7 @@ using HttpCommon
 using Logging
 using Compat
 using ZMQ
+using JSON
 
 include("srvrfn.jl")
 
