@@ -2,17 +2,13 @@ language: julia
 os:
     - osx
     - linux
-addons:
-    apt:
-        packages:
-        - libzmq3
-before_install:
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update          ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install zeromq32; fi
 julia:
-    - 0.5
     - 0.6
     - nightly
+matrix:
+    fast_finish: true
+    allow_failures:
+        - julia: nightly
 notifications:
     email: false
 #script:
