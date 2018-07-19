@@ -1,10 +1,10 @@
-@compat abstract type AbstractMsgFormat end
+abstract type AbstractMsgFormat end
 
 """
 Intermediate format based on JSON.
 A JSON object with `cmd` (string), `args` (array), `vargs` (dict).
 """
-immutable JSONMsgFormat <: AbstractMsgFormat
+struct JSONMsgFormat <: AbstractMsgFormat
 end
 
 wireformat(fmt::JSONMsgFormat, cmd::String, args...; data...) = JSON.json(_dict_fmt(cmd, args...; data...))
@@ -15,7 +15,7 @@ juliaformat(fmt::JSONMsgFormat, msgstr) = JSON.parse(msgstr)
 Intermediate format based on Julia serialization.
 A dict with `cmd` (string), `args` (array), `vargs` (dict).
 """
-immutable SerializedMsgFormat <: AbstractMsgFormat
+struct SerializedMsgFormat <: AbstractMsgFormat
 end
 
 wireformat(fmt::SerializedMsgFormat, cmd::String, args...; data...) = _dict_ser(_dict_fmt(cmd, args...; data...))
@@ -26,7 +26,7 @@ juliaformat(fmt::SerializedMsgFormat, msgstr) = _dict_dser(msgstr)
 Intermediate format that is just a Dict. No serialization.
 A Dict with `cmd` (string), `args` (array), `vargs` (dict).
 """
-immutable DictMsgFormat <: AbstractMsgFormat
+struct DictMsgFormat <: AbstractMsgFormat
 end
 
 wireformat(fmt::DictMsgFormat, cmd::String, args...; data...) = _dict_fmt(cmd, args...; data...)

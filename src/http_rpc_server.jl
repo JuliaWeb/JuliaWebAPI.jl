@@ -140,7 +140,7 @@ function get_multipart_form_boundary(req::Request)
     parts[2]
 end
 
-function http_handler{T,F}(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::Request, res::Response)
+function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::Request, res::Response) where {T,F}
     Logging.info("processing request ", req)
     
     try
@@ -204,12 +204,12 @@ end
 
 function reusable_tcpserver()
     tcp = Base.TCPServer(Base.Libc.malloc(Base._sizeof_uv_tcp), Base.StatusUninit)
-    err = ccall(:uv_tcp_init_ex, Cint, (Ptr{Void}, Ptr{Void}, Cuint),
+    err = ccall(:uv_tcp_init_ex, Cint, (Ptr{Nothing}, Ptr{Nothing}, Cuint),
                 Base.eventloop(), tcp.handle, 2)
     Base.uv_error("failed to create tcp server", err)
     tcp.status = Base.StatusInit
 
-    rc = ccall(:jl_tcp_reuseport, Int32, (Ptr{Void},), tcp.handle)
+    rc = ccall(:jl_tcp_reuseport, Int32, (Ptr{Nothing},), tcp.handle)
     if rc == 0
         Logging.info("Reusing TCP port")
     else
@@ -218,8 +218,8 @@ function reusable_tcpserver()
     return tcp
 end
 
-HttpRpcServer{T,F}(api::APIInvoker{T,F}, preproc::Function=default_preproc) = HttpRpcServer([api], preproc)
-function HttpRpcServer{T,F}(apis::Vector{APIInvoker{T,F}}, preproc::Function=default_preproc)
+HttpRpcServer(api::APIInvoker{T,F}, preproc::Function=default_preproc) where {T,F} = HttpRpcServer([api], preproc)
+function HttpRpcServer(apis::Vector{APIInvoker{T,F}}, preproc::Function=default_preproc) where {T,F}
     api = Channel{APIInvoker{T,F}}(length(apis))
     for member in apis
         put!(api, member)
@@ -237,8 +237,8 @@ function HttpRpcServer{T,F}(apis::Vector{APIInvoker{T,F}}, preproc::Function=def
     HttpRpcServer{T,F}(api, handler, server)
 end
 
-run_http{T,F}(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc) = run_http(api, preproc; port=port)
-function run_http{T,F}(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, preproc::Function=default_preproc; kwargs...)
+run_http(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc) where {T,F} = run_http(api, preproc; port=port)
+function run_http(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, preproc::Function=default_preproc; kwargs...) where {T,F}
     Logging.debug("running HTTP RPC server...")
     httprpc = HttpRpcServer(api, preproc)
     run(httprpc.server; kwargs...)

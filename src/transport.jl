@@ -1,8 +1,8 @@
-@compat abstract type AbstractTransport end
+abstract type AbstractTransport end
 
 
 """Transport layer over ZMQ sockets"""
-immutable ZMQTransport <: AbstractTransport
+struct ZMQTransport <: AbstractTransport
     ctx::Context
     sock::Socket
     mode::Int # REQ/REP
@@ -46,7 +46,7 @@ end
 
 
 """Transport layer over in-process Channels"""
-immutable InProcTransport <: AbstractTransport
+struct InProcTransport <: AbstractTransport
     name::Symbol
 
     function InProcTransport(name::Symbol)

@@ -1,6 +1,6 @@
-@compat abstract type AbstractAPIResponder end
+abstract type AbstractAPIResponder end
 
-immutable APISpec
+struct APISpec
     fn::Function
     resp_json::Bool
     resp_headers::Dict{String,String}
@@ -11,15 +11,15 @@ const EndPts = Dict{String,APISpec}
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
 """
-immutable APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
+struct APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
     transport::T
     format::F
-    id::Union{Void,String}  # optional responder id to be sent back
+    id::Union{Nothing,String}  # optional responder id to be sent back
     open::Bool  #whether the responder will process all functions, or only registered ones
     endpoints::EndPts
 end
 
-APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}(transport::T, format::F, id::Union{Void,String}=nothing, open::Bool=false) = APIResponder(transport, format, id, open, EndPts())
+APIResponder(transport::T, format::F, id::Union{Nothing,String}=nothing, open::Bool=false) where {T<:AbstractTransport,F<:AbstractMsgFormat} = APIResponder(transport, format, id, open, EndPts())
 
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
