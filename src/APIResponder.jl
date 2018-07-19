@@ -61,17 +61,18 @@ function respond(conn::APIResponder, code::Int, headers::Dict, resp)
     sendresp(conn.transport, resp)
 end
 
-respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp=nothing) =
+respond(conn::APIResponder, api::Union{Nothing,APISpec}, status::Symbol, resp=nothing) =
     respond(conn, ERR_CODES[status][1], get_hdrs(api), get_resp(api, status, resp))
 
-get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{String,String}()
+get_hdrs(api::Nothing) = Dict{String,String}()
+get_hdrs(api::APISpec) = api.resp_headers
 
-function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
+function get_resp(api::Union{Nothing,APISpec}, status::Symbol, resp=nothing)
     st = ERR_CODES[status]
     stcode = st[2]
-    stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
+    stresp = ((stcode != 0) && (resp === nothing)) ? string(st[3], " : ", st[2]) : resp
 
-    if !isnull(api) && get(api).resp_json
+    if (api !== nothing) && api.resp_json
         return Dict{String, Any}("code"=>stcode, "data"=>stresp)
     else
         return stresp
@@ -95,10 +96,10 @@ function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any}
             narrow_args!(args)
         end
         result = dynamic_invoke(conn, api.fn, args...; data...)
-        respond(conn, Nullable(api), :success, result)
+        respond(conn, api, :success, result)
     catch ex
         logerr("api_exception: ", ex)
-        respond(conn, Nullable(api), :api_exception, string(ex))
+        respond(conn, api, :api_exception, string(ex))
     end
 end
 
@@ -143,7 +144,7 @@ function process(conn::APIResponder; async::Bool=false)
             if startswith(command, ':')    # is a control command
                 ctrlcmd = Symbol(command[2:end])
                 if ctrlcmd === :terminate
-                    respond(conn, Nullable{APISpec}(), :terminate, "")
+                    respond(conn, nothing, :terminate, "")
                     break
                 else
                     err("invalid control command ", command)
@@ -153,7 +154,7 @@ function process(conn::APIResponder; async::Bool=false)
 
             if !haskey(conn.endpoints, command)
                 if !conn.open || !isdefined(Main, Symbol(command))
-                    respond(conn, Nullable{APISpec}(), :invalid_api)
+                    respond(conn, nothing, :invalid_api)
                     continue
                 else
                     _add_spec(getfield(Main, Symbol(command)), conn)
@@ -164,7 +165,7 @@ function process(conn::APIResponder; async::Bool=false)
                 call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
             catch ex
                 logerr("exception ", ex)
-                respond(conn, Nullable(conn.endpoints[command]), :invalid_data)
+                respond(conn, conn.endpoints[command], :invalid_data)
             end
         end
         close(conn.transport)
