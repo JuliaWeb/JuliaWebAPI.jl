@@ -6,10 +6,15 @@ using Logging
 using ZMQ
 using Compat
 using Compat.Test
+using Compat.Random
 using HTTP
 using JSON
 
-Logging.configure(level=INFO)
+@static if isdefined(Base, Symbol("@info"))
+    global_logger(ConsoleLogger(stderr, Logging.Info))
+else
+    Logging.configure(level=INFO)
+end
 
 const NCALLS = 100
 const APIARGS = randperm(NCALLS*4)
@@ -33,31 +38,31 @@ function run_clnt(fmt, tport)
     resp = apicall(apiclnt, "testbinary", 10)
     printresp(apiclnt, "testbinary", resp)
 
-    tic()
+    t = time()
     for idx in 1:100
         arg1,arg2,narg1,narg2 = APIARGS[(4*idx-3):(4*idx)]
         resp = apicall(apiclnt, "testfn1", arg1, arg2; narg1=narg1, narg2=narg2)
         @test fnresponse(apiclnt.format, resp)["data"] == (arg1 * narg1) + (arg2 * narg2)
     end
-    t = toc();
+    t = time() - t
     println("time for $NCALLS calls to testfn1: $t secs @ $(t/NCALLS) per call")
 
-    tic()
+    t = time()
     for idx in 1:100
         arg1,arg2,narg1,narg2 = APIARGS[(4*idx-3):(4*idx)]
         resp = apicall(apiclnt, "testfn2", arg1, arg2; narg1=narg1, narg2=narg2)
         @test fnresponse(apiclnt.format, resp) == (arg1 * narg1) + (arg2 * narg2)
     end
-    t = toc();
+    t = time() - t
     println("time for $NCALLS calls to testfn2: $t secs @ $(t/NCALLS) per call")
 
-    tic()
+    t = time()
     for idx in 1:100
         arrlen = APIARGS[idx]
         resp = apicall(apiclnt, "testbinary", arrlen)
         @test isa(fnresponse(apiclnt.format, resp), Array)
     end
-    t = toc();
+    t = time() - t
     println("time for $NCALLS calls to testbinary: $t secs @ $(t/NCALLS) per call")
 
     # Test Array invocation
@@ -71,13 +76,13 @@ function run_clnt(fmt, tport)
     @test resp["code"] == 404
     resp = apicall(apiclnt, "testArray", "no such argument")
     @test resp["code"] == 500
-    @test contains(resp["data"], "MethodError")
+    @test Compat.occursin("MethodError", resp["data"])
 
     # Test exceptions
     println("testing server method exception handling...")
     resp = apicall(apiclnt, "testException")
     @test resp["code"] == 500
-    @test contains(resp["data"]["data"], "testing exception handling")
+    @test Compat.occursin("testing exception handling", resp["data"]["data"])
 
     close(ctx)
     close(tport)

@@ -50,7 +50,11 @@ TODO: validate method belongs to module?
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
                   resp_headers::Dict=Dict{String,String}(), endpt=default_endpoint(f))
-    Logging.debug("registering endpoint [$endpt]")
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("registering", endpt)
+    else
+        Logging.debug("registering endpoint [$endpt]")
+    end
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn # make fluent api possible
 end
@@ -131,15 +135,27 @@ end
 """start processing as a server"""
 function process(conn::APIResponder; async::Bool=false)
     if async
-        Logging.debug("processing async...")
+        @static if isdefined(Base, Symbol("@debug"))
+            @debug("processing async...")
+        else
+            Logging.debug("processing async...")
+        end
         @async process(conn)
     else
-        Logging.debug("processing...")
+        @static if isdefined(Base, Symbol("@debug"))
+            @debug("processing...")
+        else
+            Logging.debug("processing...")
+        end
         while true
             msg = juliaformat(conn.format, recvreq(conn.transport))
 
             command = cmd(conn.format, msg)
-            Logging.info("received request: ", command)
+            @static if isdefined(Base, Symbol("@info"))
+                @info("received", command)
+            else
+                Logging.info("received request: ", command)
+            end
 
             if startswith(command, ':')    # is a control command
                 ctrlcmd = Symbol(command[2:end])
@@ -147,7 +163,11 @@ function process(conn::APIResponder; async::Bool=false)
                     respond(conn, nothing, :terminate, "")
                     break
                 else
-                    err("invalid control command ", command)
+                    @static if isdefined(Base, Symbol("@error"))
+                        @error("invalid control command ", command)
+                    else
+                        err("invalid control command ", command)
+                    end
                     continue
                 end
             end
@@ -169,15 +189,13 @@ function process(conn::APIResponder; async::Bool=false)
             end
         end
         close(conn.transport)
-        Logging.info("stopped processing.")
+        @static if isdefined(Base, Symbol("@info"))
+            @info("stopped processing.")
+        else
+            Logging.info("stopped processing.")
+        end
     end
     conn
-end
-
-function setup_logging(;log_level=INFO, nid::String=get(ENV,"JBAPI_CID",""))
-    api_name = get(ENV,"JBAPI_NAME", "noname")
-    logfile = "apisrvr_$(api_name)_$(nid).log"
-    Logging.configure(level=log_level, filename=logfile)
 end
 
 _add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{String,String}())
@@ -202,5 +220,9 @@ function logerr(msg, ex)
     iob = IOBuffer()
     write(iob, msg)
     showerror(iob, ex)
-    err(String(take!(iob)))
+    @static if isdefined(Base, Symbol("@error"))
+        @error(String(take!(iob)))
+    else
+        err(String(take!(iob)))
+    end
 end

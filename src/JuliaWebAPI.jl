@@ -7,7 +7,9 @@ using JSON
 using Logging
 using HTTP
 using Compat
+using Compat.Base64
 using Compat.Sockets
+using Compat.Serialization
 
 import Base: close
 

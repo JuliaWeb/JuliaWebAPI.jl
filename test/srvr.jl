@@ -15,12 +15,21 @@ const SRVR_ADDR = "tcp://127.0.0.1:9999"
 const JSON_RESP_HDRS = Dict{String,String}("Content-Type" => "application/json; charset=utf-8")
 const BINARY_RESP_HDRS = Dict{String,String}("Content-Type" => "application/octet-stream")
 
-function run_srvr(fmt, tport, async=false, open=false)
-    Logging.configure(level=INFO, filename="apisrvr_test.log")
-    Logging.info("queue is at $SRVR_ADDR")
+function run_srvr(fmt, tport, async=false, openaccess=false)
+    @static if isdefined(Base, Symbol("@info"))
+        global_logger(SimpleLogger(open("apisrvr_test.log", "a"), Logging.Info))
+        @info("queue is at $SRVR_ADDR")
+    else
+        Logging.configure(level=Logging.INFO, filename="apisrvr_test.log")
+        Logging.info("queue is at $SRVR_ADDR")
+    end
 
-    api = APIResponder(tport, fmt, nothing, open)
-    Logging.info("responding with: $api")
+    api = APIResponder(tport, fmt, nothing, openaccess)
+    @static if isdefined(Base, Symbol("@info"))
+        @info("responding with: $api")
+    else
+        Logging.info("responding with: $api")
+    end
 
     register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
     register(api, testfn2)
@@ -54,7 +63,11 @@ function wait_for_httpsrvr()
             close(sock)
             return
         catch
-            Logging.info("waiting for httpserver to come up at port 8888...")
+            @static if isdefined(Base, Symbol("@info"))
+                @info("waiting for httpserver to come up at port 8888...")
+            else
+                Logging.info("waiting for httpserver to come up at port 8888...")
+            end
             sleep(5)
         end
     end

@@ -37,6 +37,21 @@ Binary files can be uplaoded by encoding them with base64 first.
 """
 const LFLF = UInt8['\n', '\n']
 const CRLFCRLF = UInt8['\r', '\n', '\r', '\n']
+function searcharr(haystack, needle, startpos)
+    @static if VERSION < v"0.7.0-"
+        search(haystack, needle, startpos)
+    else
+        Lh = length(haystack)
+        Ln = length(needle)
+        if Lh > Ln
+            for idx in startpos:(Lh-Ln+1)
+                r = idx:(idx+Ln-1)
+                (view(haystack, r) == needle) && (return r)
+            end
+        end
+        0:-1
+    end
+end
 function parsepostdata(req, data_dict, multipart_boundary)
     data = getfield(req, :body)
     boundary_end = "--" * multipart_boundary * "--"
@@ -47,15 +62,15 @@ function parsepostdata(req, data_dict, multipart_boundary)
     boundbytes = convert(Vector{UInt8}, boundary)
     boundbytes_end = convert(Vector{UInt8}, boundary_end)
 
-    boundloc = search(data, boundbytes, 1)
+    boundloc = searcharr(data, boundbytes, 1)
     endpos = startpos = last(boundloc) + 1
     parts = Vector{Vector{UInt8}}()
     isend = false
 
     while !isend && ((startpos + Lbound) < Ldata)
-        boundloc = search(data, boundbytes, startpos)
+        boundloc = searcharr(data, boundbytes, startpos)
         if isempty(boundloc)
-            boundloc = search(data, boundbytes_end, startpos)
+            boundloc = searcharr(data, boundbytes_end, startpos)
             isend = true
         end
         if !isempty(boundloc)
@@ -69,8 +84,8 @@ function parsepostdata(req, data_dict, multipart_boundary)
     end
 
     for part in parts
-        hdrloc1 = search(part, LFLF, 1)
-        hdrloc2 = search(part, CRLFCRLF, 1)
+        hdrloc1 = searcharr(part, LFLF, 1)
+        hdrloc2 = searcharr(part, CRLFCRLF, 1)
 
         if length(hdrloc1) == 0
             hdrloc = hdrloc2
@@ -139,7 +154,11 @@ function get_multipart_form_boundary(req::HTTP.Request)
 end
 
 function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HTTP.Request) where {T,F}
-    Logging.info("processing request ", req)
+    @static if isdefined(Base, Symbol("@info"))
+        @info("processing", target=getfield(req, :target))
+    else
+        Logging.info("processing request ", req)
+    end
     res = HTTP.Response(500)
     
     try
@@ -164,15 +183,27 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
                     res = HTTP.Response(404)
                 else
                     cmd = shift!(args)
-                    Logging.info("waiting for a handler")
+                    @static if isdefined(Base, Symbol("@info"))
+                        @info("waiting for a handler")
+                    else
+                        Logging.info("waiting for a handler")
+                    end
                     api = take!(apis)
                     try
                         if isempty(data_dict)
-                            Logging.debug("calling cmd ", cmd, ", with args ", args)
+                            @static if isdefined(Base, Symbol("@debug"))
+                                @debug("calling", cmd, args)
+                            else
+                                Logging.debug("calling cmd ", cmd, ", with args ", args)
+                            end
                             res = httpresponse(api.format, apicall(api, cmd, args...))
                         else
                             vargs = make_vargs(data_dict)
-                            Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
+                            @static if isdefined(Base, Symbol("@debug"))
+                                @debug("calling", cmd, args, vargs)
+                            else
+                                Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
+                            end
                             res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
                         end
                     finally
@@ -186,12 +217,13 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
         Base.showerror(Compat.stderr, e, catch_backtrace())
         err("Exception in handler: ", e)
     end
-    Logging.debug("\tresponse ", res)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("response", res)
+    else
+        Logging.debug("\tresponse ", res)
+    end
     return res
 end
-
-on_error(client, e) = err("HTTP error: ", e)
-on_listen(port) = Logging.info("listening on port ", port, "...")
 
 default_preproc(req::HTTP.Request) = nothing
 
@@ -213,7 +245,11 @@ end
 
 run_http(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc; kwargs...) where {T,F} = run_http(HttpRpcServer(api, preproc), port; kwargs...)
 function run_http(httprpc::HttpRpcServer{T,F}, port::Int; kwargs...) where {T,F}
-    Logging.debug("running HTTP RPC server...")
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("running HTTP RPC server...")
+    else
+        Logging.debug("running HTTP RPC server...")
+    end
     HTTP.listen(ip"127.0.0.1", port; kwargs...) do req::HTTP.Request
         HTTP.handle(httprpc.handler, req)
     end

@@ -2,6 +2,7 @@ using JuliaWebAPI
 using Logging
 using Compat
 using Compat.Test
+using Compat.Distributed
 
 include("clnt.jl")
 
@@ -22,12 +23,12 @@ end
 function time_remotecall()
     addproc_srvr()
 
-    tic()
+    t1 = time()
     for idx in 1:NCALLS
         arg1,arg2,narg1,narg2 = APIARGS[(4*idx-3):(4*idx)]
         @test remotecall_fetch((a1,a2,a3,a4)->(a1*a3 + a2*a4), 2, arg1, arg2, narg1, narg2) == (arg1 * narg1) + (arg2 * narg2)
     end
-    t = toc()
+    t = time() - t1
     println("time for $NCALLS calls with remotecall_fetch: $t secs @ $(t/NCALLS) per call")
     rmproc_srvr()
 

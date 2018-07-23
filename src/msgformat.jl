@@ -38,7 +38,15 @@ juliaformat(fmt::DictMsgFormat, msg) = msg
 ##############################################
 cmd(fmt::AbstractMsgFormat, msg) = get(msg, "cmd", "")
 args(fmt::AbstractMsgFormat, msg) = get(msg, "args", [])
-data(fmt::AbstractMsgFormat, msg) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
+function data(fmt::AbstractMsgFormat, msg)
+    vargs = get(msg, "vargs", Dict{Symbol,Any}())
+    isa(vargs, Dict{Symbol,Any}) && (return vargs)
+    dict = Dict{Symbol,Any}()
+    for (n,v) in vargs
+        dict[Symbol(n)] = v
+    end
+    dict
+end
 
 """
 extract and return the response data as a direct function call would have returned
@@ -83,7 +91,11 @@ function _dict_fmt(code::Int, headers::Dict{String,String}, resp, id=nothing)
 
     if !isempty(headers)
         msg["hdrs"] = headers
-        Logging.debug("sending headers: ", headers)
+        @static if isdefined(Base, Symbol("@debug"))
+            @debug("sending headers", headers)
+        else
+            Logging.debug("sending headers: ", headers)
+        end
     end
 
     msg["code"] = code

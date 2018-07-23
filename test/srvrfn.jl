@@ -1,4 +1,5 @@
 using Compat
+using Compat.Base64
 
 function testfn1(arg1, arg2; narg1=1, narg2=2)
     a1 = isa(arg1, Int) ? arg1 : parse(Int, arg1)

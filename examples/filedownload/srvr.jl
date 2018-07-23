@@ -1,5 +1,6 @@
 using JuliaWebAPI
 using Compat
+using Compat.Base64
 using Logging
 using GZip
 
