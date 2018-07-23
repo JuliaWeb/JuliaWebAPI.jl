@@ -1,7 +1,7 @@
 using JuliaWebAPI
 using Logging
-using Base.Test
 using Compat
+using Compat.Test
 
 const opts = Base.JLOptions()
 const inline_flag = opts.can_inline == 1 ? `` : `--inline=no`
@@ -23,5 +23,4 @@ run_test("test_clntsrvr.jl", "--runclntsrvr")
 run_test("test_remotecall.jl", "--runremotecall")
 run_test("test_plugins.jl", "--runsermsgformat")
 run_test("test_plugins.jl", "--runinproctransport")
-run_test("test_jbox.jl", "")
 run_test("test_httprpc.jl", "--runhttptests")

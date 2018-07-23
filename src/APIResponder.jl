@@ -31,7 +31,7 @@ APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://
 
 function Base.show(io::IO, x::APIResponder)
     println(io, "JuliaWebAPI.APIResponder with endpoints:")
-    Base.show_comma_array(STDOUT, keys(x.endpoints), "","")
+    Base.show_comma_array(io, keys(x.endpoints), "","")
 end
 
 function default_endpoint(f::Function)
@@ -180,20 +180,6 @@ function setup_logging(;log_level=INFO, nid::String=get(ENV,"JBAPI_CID",""))
     Logging.configure(level=log_level, filename=logfile)
 end
 
-function process_async(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::String=get(ENV,"JBAPI_CID",""), open::Bool=false)
-    Base.depwarn("processs_async is deprecated, use process(conn::APIResponder; async::Bool=true) instead", :process)
-    process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, open=open, async=true)
-end
-
-function process(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
-                bind::Bool=false, nid::String=get(ENV,"JBAPI_CID",""), open::Bool=false, async::Bool=false)
-    Base.depwarn("processs(apispecs::Array,...) is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
-    setup_logging(;log_level=log_level)
-    Logging.debug("queue is at $addr")
-    api = create_responder(apispecs, addr, bind, nid, open)
-    process(api; async=async)
-end
-
 _add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{String,String}())
 
 function _add_spec(spec::Tuple, api::APIResponder)
@@ -210,23 +196,6 @@ function create_responder(apispecs::Array, addr, bind, nid, open=false)
         _add_spec(spec, api)
     end
     api
-end
-
-function process()
-    Base.depwarn("process() is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
-    log_level = Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO"))
-    setup_logging(;log_level=log_level)
-
-    Logging.info("Reading api server configuration from environment...")
-    Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
-    Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
-    Logging.info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))
-    Logging.info("JBAPI_CID=" * get(ENV,"JBAPI_CID",""))
-    Logging.info("JBAPI_LOGLEVEL=" * get(ENV,"JBAPI_LOGLEVEL","") * " as " * string(log_level))
-
-    cmd = get(ENV,"JBAPI_CMD","")
-    eval(parse(cmd))
-    nothing
 end
 
 function logerr(msg, ex)

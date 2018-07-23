@@ -1,7 +1,7 @@
 using JuliaWebAPI
 using Logging
-using Base.Test
 using Compat
+using Compat.Test
 
 include("srvr.jl")
 include("clnt.jl")

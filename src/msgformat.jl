@@ -92,7 +92,7 @@ function _dict_fmt(code::Int, headers::Dict{String,String}, resp, id=nothing)
 end
 
 function _dict_httpresponse(resp)
-    hdrs = HttpCommon.headers()
+    hdrs = Dict{String,String}()
     if "hdrs" in keys(resp)
         for (k,v) in resp["hdrs"]
             hdrs[k] = v
@@ -102,7 +102,8 @@ function _dict_httpresponse(resp)
     respdata = isa(data, Array) ? convert(Array{UInt8}, data) :
                isa(data, Dict) ? JSON.json(data) :
                string(data)
-    Response(resp["code"], hdrs, respdata)
+
+    HTTP.Response(resp["code"], hdrs; body=respdata)
 end
 
 function _dict_fnresponse(resp)
