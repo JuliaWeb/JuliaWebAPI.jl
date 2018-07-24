@@ -50,9 +50,9 @@ function run_httprpcsrvr(fmt, tport, async=false)
     run_srvr(fmt, tport, true, true)
     apiclnt = APIInvoker(ZMQTransport(SRVR_ADDR, REQ, false), fmt)
     if async
-        @async run_http(apiclnt, 8888, test_preproc)
+        @async run_http(apiclnt, 8888, test_preproc; reuseaddr=true)
     else
-        run_http(apiclnt, 8888, test_preproc)
+        run_http(apiclnt, 8888, test_preproc; reuseaddr=true)
     end
 end
 
