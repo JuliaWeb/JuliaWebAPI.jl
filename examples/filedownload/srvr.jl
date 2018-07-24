@@ -9,7 +9,7 @@ const FILE_DOWNLOAD_HDR = Dict{String,String}("Content-Type" => "application/oct
 
 function filebytes(filename)
     open(filename, "r") do fp
-        buff = Array(UInt8, filesize(filename))
+        buff = Array{UInt8}(filesize(filename))
         return read!(fp, buff)
     end
 end
@@ -53,7 +53,7 @@ function listfiles()
         println(iob, "<li><a href=\"/servefile/$fname\">$fname</a> | <a href=\"/servefile/$fname?zipped=true\">zipped</a></li>")
     end
     println(iob, "</ul></body></html>")
-    takebuf_string(iob)
+    String(take!(iob))
 end
 
 function savefile(; upfile=nothing, filename=nothing)
@@ -76,4 +76,4 @@ const REGISTERED_APIS = [
         (savefile, false),
     ]
 
-process(REGISTERED_APIS, "tcp://127.0.0.1:9999"; bind=true, log_level=INFO)
+process(JuliaWebAPI.create_responder(REGISTERED_APIS, "tcp://127.0.0.1:9999", true, ""))
