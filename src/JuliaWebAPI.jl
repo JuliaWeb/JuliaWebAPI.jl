@@ -5,9 +5,11 @@ module JuliaWebAPI
 using ZMQ
 using JSON
 using Logging
-using HttpCommon
-using HttpServer
+using HTTP
 using Compat
+using Compat.Base64
+using Compat.Sockets
+using Compat.Serialization
 
 import Base: close
 

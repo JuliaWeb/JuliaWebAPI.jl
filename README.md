@@ -79,22 +79,3 @@ function auth_preproc(req::Request, res::Response)
 end
 run_http(apiclnt, 8888, auth_preproc)
 ````
-
-
-## JuliaBox Deployment
-
-Deploying on JuliaBox takes care of most of the boilerplate code. To expose a simple fibonacci generator on JuliaBox, paste the following 
-code as the API command:
-````
-fib(n::AbstractString) = fib(parse(Int, n));
-fib(n::Int) = (n < 2) ? n : (fib(n-1) + fib(n-2));
-process([(fib, false)]);
-````
-
-Notice that we need to specify a lot less detail on JuliaBox. JuliaBox connects the API servers to a queue, instead of the server having to listen 
-for requests. The obvious packages are aleady imported.
-
-The JuliaBox API command must however be concisely expressed within 512 bytes without new lines. To run larger applications, simply package up the 
-code as a Julia package and install the package as part of the command. For an example, see the [Juliaset API package](https://github.com/tanmaykm/Juliaset.jl).
-
-Note: A [JuliaBox](https://github.com/JuliaCloud/JuliaBox) deployment may or may not have this enabled, depending on how it has been configured.

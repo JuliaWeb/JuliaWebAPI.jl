@@ -1,10 +1,10 @@
-@compat abstract type AbstractMsgFormat end
+abstract type AbstractMsgFormat end
 
 """
 Intermediate format based on JSON.
 A JSON object with `cmd` (string), `args` (array), `vargs` (dict).
 """
-immutable JSONMsgFormat <: AbstractMsgFormat
+struct JSONMsgFormat <: AbstractMsgFormat
 end
 
 wireformat(fmt::JSONMsgFormat, cmd::String, args...; data...) = JSON.json(_dict_fmt(cmd, args...; data...))
@@ -15,7 +15,7 @@ juliaformat(fmt::JSONMsgFormat, msgstr) = JSON.parse(msgstr)
 Intermediate format based on Julia serialization.
 A dict with `cmd` (string), `args` (array), `vargs` (dict).
 """
-immutable SerializedMsgFormat <: AbstractMsgFormat
+struct SerializedMsgFormat <: AbstractMsgFormat
 end
 
 wireformat(fmt::SerializedMsgFormat, cmd::String, args...; data...) = _dict_ser(_dict_fmt(cmd, args...; data...))
@@ -26,7 +26,7 @@ juliaformat(fmt::SerializedMsgFormat, msgstr) = _dict_dser(msgstr)
 Intermediate format that is just a Dict. No serialization.
 A Dict with `cmd` (string), `args` (array), `vargs` (dict).
 """
-immutable DictMsgFormat <: AbstractMsgFormat
+struct DictMsgFormat <: AbstractMsgFormat
 end
 
 wireformat(fmt::DictMsgFormat, cmd::String, args...; data...) = _dict_fmt(cmd, args...; data...)
@@ -38,7 +38,15 @@ juliaformat(fmt::DictMsgFormat, msg) = msg
 ##############################################
 cmd(fmt::AbstractMsgFormat, msg) = get(msg, "cmd", "")
 args(fmt::AbstractMsgFormat, msg) = get(msg, "args", [])
-data(fmt::AbstractMsgFormat, msg) = convert(Dict{Symbol,Any}, get(msg, "vargs", Dict{Symbol,Any}()))
+function data(fmt::AbstractMsgFormat, msg)
+    vargs = get(msg, "vargs", Dict{Symbol,Any}())
+    isa(vargs, Dict{Symbol,Any}) && (return vargs)
+    dict = Dict{Symbol,Any}()
+    for (n,v) in vargs
+        dict[Symbol(n)] = v
+    end
+    dict
+end
 
 """
 extract and return the response data as a direct function call would have returned
@@ -83,7 +91,11 @@ function _dict_fmt(code::Int, headers::Dict{String,String}, resp, id=nothing)
 
     if !isempty(headers)
         msg["hdrs"] = headers
-        Logging.debug("sending headers: ", headers)
+        @static if isdefined(Base, Symbol("@debug"))
+            @debug("sending headers", headers)
+        else
+            Logging.debug("sending headers: ", headers)
+        end
     end
 
     msg["code"] = code
@@ -92,7 +104,7 @@ function _dict_fmt(code::Int, headers::Dict{String,String}, resp, id=nothing)
 end
 
 function _dict_httpresponse(resp)
-    hdrs = HttpCommon.headers()
+    hdrs = Dict{String,String}()
     if "hdrs" in keys(resp)
         for (k,v) in resp["hdrs"]
             hdrs[k] = v
@@ -102,7 +114,8 @@ function _dict_httpresponse(resp)
     respdata = isa(data, Array) ? convert(Array{UInt8}, data) :
                isa(data, Dict) ? JSON.json(data) :
                string(data)
-    Response(resp["code"], hdrs, respdata)
+
+    HTTP.Response(resp["code"], hdrs; body=respdata)
 end
 
 function _dict_fnresponse(resp)

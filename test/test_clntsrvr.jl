@@ -1,7 +1,7 @@
 using JuliaWebAPI
 using Logging
-using Base.Test
 using Compat
+using Compat.Test
 
 include("clnt.jl")
 
@@ -13,9 +13,9 @@ const cov_flag = (opts.code_coverage == 1) ? `--code-coverage=user` :
 
 function spawn_srvr()
     srvrscript = joinpath(dirname(@__FILE__), "srvr.jl")
-    srvrcmd = `$(joinpath(JULIA_HOME, "julia")) $cov_flag $inline_flag $srvrscript --runsrvr`
+    srvrcmd = `$(joinpath(Compat.Sys.BINDIR, "julia")) $cov_flag $inline_flag $srvrscript --runsrvr`
     println("spawining $srvrcmd")
-    srvrproc = spawn(srvrcmd)
+    srvrproc = @static (VERSION < v"0.7.0-") ? spawn(srvrcmd) : run(srvrcmd, wait=false)
 end
 
 function kill_spawned_srvr(srvrproc)

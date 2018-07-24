@@ -18,18 +18,16 @@ end
 
 function parsepostdata(req, query)
     post_data = ""
-    if isa(req.data, Vector{UInt8})
-        if !isempty(req.data)
-            idx = findfirst(req.data, UInt8('\0'))
-            idx = (idx == 0) ? endof(req.data) : (idx - 1)
-            post_data = String(req.data[1:idx])
-        end
-    elseif isa(req.data, String)
-        post_data = req.data
+    req_body = getfield(req, :body)
+
+    if !isempty(req_body)
+        idx = findfirst(req_body, UInt8('\0'))
+        idx = (idx == 0) ? endof(req_body) : (idx - 1)
+        post_data = (idx == 0) ? String(req_body) : String(req_body[1:(idx-1)])
     end
     
     ('=' in post_data) || (return query)
-    merge(query, parsequerystring(post_data))
+    merge(query, HTTP.queryparams(post_data))
 end
 
 """
@@ -39,8 +37,23 @@ Binary files can be uplaoded by encoding them with base64 first.
 """
 const LFLF = UInt8['\n', '\n']
 const CRLFCRLF = UInt8['\r', '\n', '\r', '\n']
+function searcharr(haystack, needle, startpos)
+    @static if VERSION < v"0.7.0-"
+        search(haystack, needle, startpos)
+    else
+        Lh = length(haystack)
+        Ln = length(needle)
+        if Lh > Ln
+            for idx in startpos:(Lh-Ln+1)
+                r = idx:(idx+Ln-1)
+                (view(haystack, r) == needle) && (return r)
+            end
+        end
+        0:-1
+    end
+end
 function parsepostdata(req, data_dict, multipart_boundary)
-    data = req.data
+    data = getfield(req, :body)
     boundary_end = "--" * multipart_boundary * "--"
     boundary = "--" * multipart_boundary * "\r\n"
     Lbound = length(boundary)
@@ -49,15 +62,15 @@ function parsepostdata(req, data_dict, multipart_boundary)
     boundbytes = convert(Vector{UInt8}, boundary)
     boundbytes_end = convert(Vector{UInt8}, boundary_end)
 
-    boundloc = search(data, boundbytes, 1)
+    boundloc = searcharr(data, boundbytes, 1)
     endpos = startpos = last(boundloc) + 1
     parts = Vector{Vector{UInt8}}()
     isend = false
 
     while !isend && ((startpos + Lbound) < Ldata)
-        boundloc = search(data, boundbytes, startpos)
+        boundloc = searcharr(data, boundbytes, startpos)
         if isempty(boundloc)
-            boundloc = search(data, boundbytes_end, startpos)
+            boundloc = searcharr(data, boundbytes_end, startpos)
             isend = true
         end
         if !isempty(boundloc)
@@ -71,8 +84,8 @@ function parsepostdata(req, data_dict, multipart_boundary)
     end
 
     for part in parts
-        hdrloc1 = search(part, LFLF, 1)
-        hdrloc2 = search(part, CRLFCRLF, 1)
+        hdrloc1 = searcharr(part, LFLF, 1)
+        hdrloc2 = searcharr(part, CRLFCRLF, 1)
 
         if length(hdrloc1) == 0
             hdrloc = hdrloc2
@@ -97,7 +110,7 @@ function collect_part_data(data_dict, parthdr, partdata)
     #content_type = header(hdrdict, "Content-Type", "application/octet-stream")
     #istext = startswith(content_type, "text")
 
-    content_disposition = header(hdrdict, "Content-Disposition", "")
+    content_disposition = header(hdrdict, "Content-Disposition")
     (isempty(content_disposition) || !startswith(content_disposition, "form-data;")) && return
     for attr in split(content_disposition, ';')
         ('=' in attr) || continue
@@ -111,47 +124,53 @@ function collect_part_data(data_dict, parthdr, partdata)
 end
 
 function parse_part_headers(parthdr)
-    hdrdict = Headers()
+    hdrdict = Dict{String,String}()
     for hdr in split(parthdr, "\n")
         (':' in hdr) || continue
         (n,v) = split(hdr, ':'; limit=2)
-        hdrdict[strip(n)] = strip(v)
+        hdrdict[String(strip(n))] = String(strip(v))
     end
     hdrdict
 end
 
-header(req::Request, name, default=nothing) = header(req.headers, name, default)
-function header(headers::Headers, name, default=nothing)
-    for (n,v) in headers
-        (lowercase(n) == lowercase(name)) && (return headers[n])
+header(req::HTTP.Request, name, default="") = HTTP.header(req, name, default)
+function header(hdrdict::Dict, name, default="")
+    for (n,v) in hdrdict
+        (lowercase(n) == lowercase(name)) && (return v)
     end
     default
 end
 
-function get_multipart_form_boundary(req::Request)
+function get_multipart_form_boundary(req::HTTP.Request)
     content_type = header(req, "Content-Type")
-    (content_type === nothing) && (return nothing)
+    isempty(content_type) && (return nothing)
     parts = split(content_type, ";")
     (length(parts) < 2) && (return nothing)
-    (lowercase(strip(parts[1])) == "multipart/form-data") || (return false)
+    (lowercase(strip(parts[1])) == "multipart/form-data") || (return nothing)
     parts = split(strip(parts[2]), "=")
     (length(parts) < 2) && (return nothing)
     (lowercase(strip(parts[1])) == "boundary") || (return nothing)
     parts[2]
 end
 
-function http_handler{T,F}(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::Request, res::Response)
-    Logging.info("processing request ", req)
+function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HTTP.Request) where {T,F}
+    @static if isdefined(Base, Symbol("@info"))
+        @info("processing", target=getfield(req, :target))
+    else
+        Logging.info("processing request ", req)
+    end
+    res = HTTP.Response(500)
     
     try
-        comps = split(req.resource, '?', limit=2, keep=false)
+        comps = split(getfield(req, :target), '?', limit=2, keep=false)
         if isempty(comps)
-            res = Response(404)
+            res = HTTP.Response(404)
         else
-            if preproc(req, res)
-                comps = split(req.resource, '?', limit=2, keep=false)
+            res = preproc(req)
+            if res === nothing
+                comps = split(getfield(req, :target), '?', limit=2, keep=false)
                 path = shift!(comps)
-                data_dict = isempty(comps) ? Dict{String,String}() : parsequerystring(comps[1])
+                data_dict = isempty(comps) ? Dict{String,String}() : HTTP.queryparams(comps[1])
                 multipart_boundary = get_multipart_form_boundary(req)
                 if multipart_boundary === nothing
                     data_dict = parsepostdata(req, data_dict)
@@ -161,18 +180,30 @@ function http_handler{T,F}(apis::Channel{APIInvoker{T,F}}, preproc::Function, re
                 args = map(String, split(path, '/', keep=false))
 
                 if isempty(args) || !isvalidcmd(args[1])
-                    res = Response(404)
+                    res = HTTP.Response(404)
                 else
                     cmd = shift!(args)
-                    Logging.info("waiting for a handler")
+                    @static if isdefined(Base, Symbol("@info"))
+                        @info("waiting for a handler")
+                    else
+                        Logging.info("waiting for a handler")
+                    end
                     api = take!(apis)
                     try
                         if isempty(data_dict)
-                            Logging.debug("calling cmd ", cmd, ", with args ", args)
+                            @static if isdefined(Base, Symbol("@debug"))
+                                @debug("calling", cmd, args)
+                            else
+                                Logging.debug("calling cmd ", cmd, ", with args ", args)
+                            end
                             res = httpresponse(api.format, apicall(api, cmd, args...))
                         else
                             vargs = make_vargs(data_dict)
-                            Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
+                            @static if isdefined(Base, Symbol("@debug"))
+                                @debug("calling", cmd, args, vargs)
+                            else
+                                Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
+                            end
                             res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
                         end
                     finally
@@ -182,67 +213,44 @@ function http_handler{T,F}(apis::Channel{APIInvoker{T,F}}, preproc::Function, re
             end
         end
     catch e
-        res = Response(500)
-        Base.showerror(STDERR, e, catch_backtrace())
+        res = HTTP.Response(500)
+        Base.showerror(Compat.stderr, e, catch_backtrace())
         err("Exception in handler: ", e)
     end
-    Logging.debug("\tresponse ", res)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("response", res)
+    else
+        Logging.debug("\tresponse ", res)
+    end
     return res
 end
 
-on_error(client, e) = err("HTTP error: ", e)
-on_listen(port) = Logging.info("listening on port ", port, "...")
-
-default_preproc(req::Request, res::Response) = true
+default_preproc(req::HTTP.Request) = nothing
 
 # add a multipart form handler, provide default
-immutable HttpRpcServer{T,F}
+struct HttpRpcServer{T,F}
     api::Channel{APIInvoker{T,F}}
-    handler::HttpHandler
-    server::Server
+    handler::HTTP.HandlerFunction
 end
 
-function reusable_tcpserver()
-    tcp = Base.TCPServer(Base.Libc.malloc(Base._sizeof_uv_tcp), Base.StatusUninit)
-    err = ccall(:uv_tcp_init_ex, Cint, (Ptr{Void}, Ptr{Void}, Cuint),
-                Base.eventloop(), tcp.handle, 2)
-    Base.uv_error("failed to create tcp server", err)
-    tcp.status = Base.StatusInit
-
-    rc = ccall(:jl_tcp_reuseport, Int32, (Ptr{Void},), tcp.handle)
-    if rc == 0
-        Logging.info("Reusing TCP port")
-    else
-        Logging.warn("Unable to reuse TCP port, error:", rc)
-    end
-    return tcp
-end
-
-HttpRpcServer{T,F}(api::APIInvoker{T,F}, preproc::Function=default_preproc) = HttpRpcServer([api], preproc)
-function HttpRpcServer{T,F}(apis::Vector{APIInvoker{T,F}}, preproc::Function=default_preproc)
+HttpRpcServer(api::APIInvoker{T,F}, preproc::Function=default_preproc) where {T,F} = HttpRpcServer([api], preproc)
+function HttpRpcServer(apis::Vector{APIInvoker{T,F}}, preproc::Function=default_preproc) where {T,F}
     api = Channel{APIInvoker{T,F}}(length(apis))
     for member in apis
         put!(api, member)
     end
 
-    function handler(req::Request, res::Response)
-        return http_handler(api, preproc, req, res)
+    HttpRpcServer{T,F}(api, HTTP.HandlerFunction(req->http_handler(api, preproc, req)))
+end
+
+run_http(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc; kwargs...) where {T,F} = run_http(HttpRpcServer(api, preproc), port; kwargs...)
+function run_http(httprpc::HttpRpcServer{T,F}, port::Int; kwargs...) where {T,F}
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("running HTTP RPC server...")
+    else
+        Logging.debug("running HTTP RPC server...")
     end
-
-    handler = HttpHandler(handler, reusable_tcpserver())
-    handler.events["error"] = on_error
-    handler.events["listen"] = on_listen
-    server = Server(handler)
-
-    HttpRpcServer{T,F}(api, handler, server)
+    HTTP.listen(ip"127.0.0.1", port; kwargs...) do req::HTTP.Request
+        HTTP.handle(httprpc.handler, req)
+    end
 end
-
-run_http{T,F}(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc) = run_http(api, preproc; port=port)
-function run_http{T,F}(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, preproc::Function=default_preproc; kwargs...)
-    Logging.debug("running HTTP RPC server...")
-    httprpc = HttpRpcServer(api, preproc)
-    run(httprpc.server; kwargs...)
-end
-
-# for backward compatibility
-@deprecate run_rest(args...; kwargs...) run_http(args...; kwargs...)

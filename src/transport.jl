@@ -1,8 +1,8 @@
-@compat abstract type AbstractTransport end
+abstract type AbstractTransport end
 
 
 """Transport layer over ZMQ sockets"""
-immutable ZMQTransport <: AbstractTransport
+struct ZMQTransport <: AbstractTransport
     ctx::Context
     sock::Socket
     mode::Int # REQ/REP
@@ -21,21 +21,37 @@ immutable ZMQTransport <: AbstractTransport
 end
 
 function sendrecv(conn::ZMQTransport, msgstr)
-    Logging.debug("sending request: ", msgstr)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("sending request", msgstr)
+    else
+        Logging.debug("sending request: ", msgstr)
+    end
     ZMQ.send(conn.sock, ZMQ.Message(msgstr))
     respstr = unsafe_string(ZMQ.recv(conn.sock))
-    Logging.debug("received response: ", respstr)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("received response", respstr)
+    else
+        Logging.debug("received response: ", respstr)
+    end
     respstr
 end
 
 function sendresp(conn::ZMQTransport, msgstr)
-    Logging.debug("sending response: ", msgstr)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("sending response", msgstr)
+    else
+        Logging.debug("sending response: ", msgstr)
+    end
     ZMQ.send(conn.sock, ZMQ.Message(msgstr))
 end
 
 function recvreq(conn::ZMQTransport)
     reqstr = unsafe_string(ZMQ.recv(conn.sock))
-    Logging.debug("received request: ", reqstr)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("received request", reqstr)
+    else
+        Logging.debug("received request: ", reqstr)
+    end
     reqstr
 end
 
@@ -46,7 +62,7 @@ end
 
 
 """Transport layer over in-process Channels"""
-immutable InProcTransport <: AbstractTransport
+struct InProcTransport <: AbstractTransport
     name::Symbol
 
     function InProcTransport(name::Symbol)
@@ -62,16 +78,28 @@ const InProcChannels = Dict{Symbol,Tuple{Channel{Any},Channel{Any}}}()
 function sendrecv(conn::InProcTransport, msg)
     clntq,srvrq = InProcChannels[conn.name]
 
-    Logging.debug("sending request: ", msg)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("sending request", msg)
+    else
+        Logging.debug("sending request: ", msg)
+    end
     put!(srvrq, msg)
     resp = take!(clntq)
-    Logging.debug("received response: ", resp)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("received response", resp)
+    else
+        Logging.debug("received response: ", resp)
+    end
     resp
 end
 
 function sendresp(conn::InProcTransport, msg)
     clntq,srvrq = InProcChannels[conn.name]
-    Logging.debug("sending response: ", msg)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("sending response", msg)
+    else
+        Logging.debug("sending response: ", msg)
+    end
     put!(clntq, msg)
     nothing
 end
@@ -79,7 +107,11 @@ end
 function recvreq(conn::InProcTransport)
     clntq,srvrq = InProcChannels[conn.name]
     req = take!(srvrq)
-    Logging.debug("received request: ", req)
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("received request", req)
+    else
+        Logging.debug("received request: ", req)
+    end
     req
 end
 

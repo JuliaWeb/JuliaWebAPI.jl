@@ -1,6 +1,6 @@
-@compat abstract type AbstractAPIResponder end
+abstract type AbstractAPIResponder end
 
-immutable APISpec
+struct APISpec
     fn::Function
     resp_json::Bool
     resp_headers::Dict{String,String}
@@ -11,15 +11,15 @@ const EndPts = Dict{String,APISpec}
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
 """
-immutable APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
+struct APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}
     transport::T
     format::F
-    id::Union{Void,String}  # optional responder id to be sent back
+    id::Union{Nothing,String}  # optional responder id to be sent back
     open::Bool  #whether the responder will process all functions, or only registered ones
     endpoints::EndPts
 end
 
-APIResponder{T<:AbstractTransport,F<:AbstractMsgFormat}(transport::T, format::F, id::Union{Void,String}=nothing, open::Bool=false) = APIResponder(transport, format, id, open, EndPts())
+APIResponder(transport::T, format::F, id::Union{Nothing,String}=nothing, open::Bool=false) where {T<:AbstractTransport,F<:AbstractMsgFormat} = APIResponder(transport, format, id, open, EndPts())
 
 """
 APIResponder holds the transport and format used for data exchange and the endpoint specifications.
@@ -31,7 +31,7 @@ APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://
 
 function Base.show(io::IO, x::APIResponder)
     println(io, "JuliaWebAPI.APIResponder with endpoints:")
-    Base.show_comma_array(STDOUT, keys(x.endpoints), "","")
+    Base.show_comma_array(io, keys(x.endpoints), "","")
 end
 
 function default_endpoint(f::Function)
@@ -50,7 +50,11 @@ TODO: validate method belongs to module?
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
                   resp_headers::Dict=Dict{String,String}(), endpt=default_endpoint(f))
-    Logging.debug("registering endpoint [$endpt]")
+    @static if isdefined(Base, Symbol("@debug"))
+        @debug("registering", endpt)
+    else
+        Logging.debug("registering endpoint [$endpt]")
+    end
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn # make fluent api possible
 end
@@ -61,17 +65,18 @@ function respond(conn::APIResponder, code::Int, headers::Dict, resp)
     sendresp(conn.transport, resp)
 end
 
-respond(conn::APIResponder, api::Nullable{APISpec}, status::Symbol, resp=nothing) =
+respond(conn::APIResponder, api::Union{Nothing,APISpec}, status::Symbol, resp=nothing) =
     respond(conn, ERR_CODES[status][1], get_hdrs(api), get_resp(api, status, resp))
 
-get_hdrs(api::Nullable{APISpec}) = !isnull(api) ? get(api).resp_headers : Dict{String,String}()
+get_hdrs(api::Nothing) = Dict{String,String}()
+get_hdrs(api::APISpec) = api.resp_headers
 
-function get_resp(api::Nullable{APISpec}, status::Symbol, resp=nothing)
+function get_resp(api::Union{Nothing,APISpec}, status::Symbol, resp=nothing)
     st = ERR_CODES[status]
     stcode = st[2]
-    stresp = ((stcode != 0) && (resp === nothing)) ? "$(st[3]) : $(st[2])" : resp
+    stresp = ((stcode != 0) && (resp === nothing)) ? string(st[3], " : ", st[2]) : resp
 
-    if !isnull(api) && get(api).resp_json
+    if (api !== nothing) && api.resp_json
         return Dict{String, Any}("code"=>stcode, "data"=>stresp)
     else
         return stresp
@@ -95,10 +100,10 @@ function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any}
             narrow_args!(args)
         end
         result = dynamic_invoke(conn, api.fn, args...; data...)
-        respond(conn, Nullable(api), :success, result)
+        respond(conn, api, :success, result)
     catch ex
         logerr("api_exception: ", ex)
-        respond(conn, Nullable(api), :api_exception, string(ex))
+        respond(conn, api, :api_exception, string(ex))
     end
 end
 
@@ -130,30 +135,46 @@ end
 """start processing as a server"""
 function process(conn::APIResponder; async::Bool=false)
     if async
-        Logging.debug("processing async...")
+        @static if isdefined(Base, Symbol("@debug"))
+            @debug("processing async...")
+        else
+            Logging.debug("processing async...")
+        end
         @async process(conn)
     else
-        Logging.debug("processing...")
+        @static if isdefined(Base, Symbol("@debug"))
+            @debug("processing...")
+        else
+            Logging.debug("processing...")
+        end
         while true
             msg = juliaformat(conn.format, recvreq(conn.transport))
 
             command = cmd(conn.format, msg)
-            Logging.info("received request: ", command)
+            @static if isdefined(Base, Symbol("@info"))
+                @info("received", command)
+            else
+                Logging.info("received request: ", command)
+            end
 
             if startswith(command, ':')    # is a control command
                 ctrlcmd = Symbol(command[2:end])
                 if ctrlcmd === :terminate
-                    respond(conn, Nullable{APISpec}(), :terminate, "")
+                    respond(conn, nothing, :terminate, "")
                     break
                 else
-                    err("invalid control command ", command)
+                    @static if isdefined(Base, Symbol("@error"))
+                        @error("invalid control command ", command)
+                    else
+                        err("invalid control command ", command)
+                    end
                     continue
                 end
             end
 
             if !haskey(conn.endpoints, command)
                 if !conn.open || !isdefined(Main, Symbol(command))
-                    respond(conn, Nullable{APISpec}(), :invalid_api)
+                    respond(conn, nothing, :invalid_api)
                     continue
                 else
                     _add_spec(getfield(Main, Symbol(command)), conn)
@@ -164,33 +185,17 @@ function process(conn::APIResponder; async::Bool=false)
                 call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
             catch ex
                 logerr("exception ", ex)
-                respond(conn, Nullable(conn.endpoints[command]), :invalid_data)
+                respond(conn, conn.endpoints[command], :invalid_data)
             end
         end
         close(conn.transport)
-        Logging.info("stopped processing.")
+        @static if isdefined(Base, Symbol("@info"))
+            @info("stopped processing.")
+        else
+            Logging.info("stopped processing.")
+        end
     end
     conn
-end
-
-function setup_logging(;log_level=INFO, nid::String=get(ENV,"JBAPI_CID",""))
-    api_name = get(ENV,"JBAPI_NAME", "noname")
-    logfile = "apisrvr_$(api_name)_$(nid).log"
-    Logging.configure(level=log_level, filename=logfile)
-end
-
-function process_async(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=INFO, bind::Bool=false, nid::String=get(ENV,"JBAPI_CID",""), open::Bool=false)
-    Base.depwarn("processs_async is deprecated, use process(conn::APIResponder; async::Bool=true) instead", :process)
-    process(apispecs, addr; log_level=log_level, bind=bind, nid=nid, open=open, async=true)
-end
-
-function process(apispecs::Array, addr::String=get(ENV,"JBAPI_QUEUE",""); log_level=Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO")),
-                bind::Bool=false, nid::String=get(ENV,"JBAPI_CID",""), open::Bool=false, async::Bool=false)
-    Base.depwarn("processs(apispecs::Array,...) is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
-    setup_logging(;log_level=log_level)
-    Logging.debug("queue is at $addr")
-    api = create_responder(apispecs, addr, bind, nid, open)
-    process(api; async=async)
 end
 
 _add_spec(fn::Function, api::APIResponder) = register(api, fn, resp_json=false, resp_headers=Dict{String,String}())
@@ -211,26 +216,13 @@ function create_responder(apispecs::Array, addr, bind, nid, open=false)
     api
 end
 
-function process()
-    Base.depwarn("process() is deprecated, use process(conn::APIResponder; async::Bool=false) instead", :process)
-    log_level = Logging.LogLevel(get(ENV, "JBAPI_LOGLEVEL", "INFO"))
-    setup_logging(;log_level=log_level)
-
-    Logging.info("Reading api server configuration from environment...")
-    Logging.info("JBAPI_NAME=" * get(ENV,"JBAPI_NAME",""))
-    Logging.info("JBAPI_QUEUE=" * get(ENV,"JBAPI_QUEUE",""))
-    Logging.info("JBAPI_CMD=" * get(ENV,"JBAPI_CMD",""))
-    Logging.info("JBAPI_CID=" * get(ENV,"JBAPI_CID",""))
-    Logging.info("JBAPI_LOGLEVEL=" * get(ENV,"JBAPI_LOGLEVEL","") * " as " * string(log_level))
-
-    cmd = get(ENV,"JBAPI_CMD","")
-    eval(parse(cmd))
-    nothing
-end
-
 function logerr(msg, ex)
     iob = IOBuffer()
     write(iob, msg)
     showerror(iob, ex)
-    err(String(take!(iob)))
+    @static if isdefined(Base, Symbol("@error"))
+        @error(String(take!(iob)))
+    else
+        err(String(take!(iob)))
+    end
 end
