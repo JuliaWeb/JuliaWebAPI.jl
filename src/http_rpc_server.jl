@@ -250,7 +250,7 @@ function run_http(httprpc::HttpRpcServer{T,F}, port::Int; kwargs...) where {T,F}
     else
         Logging.debug("running HTTP RPC server...")
     end
-    HTTP.listen(ip"127.0.0.1", port; kwargs...) do req::HTTP.Request
+    HTTP.listen(ip"0.0.0.0", port; kwargs...) do req::HTTP.Request
         HTTP.handle(httprpc.handler, req)
     end
 end
