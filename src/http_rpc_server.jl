@@ -59,8 +59,8 @@ function parsepostdata(req, data_dict, multipart_boundary)
     Lbound = length(boundary)
     Ldata = length(data)
 
-    boundbytes = convert(Vector{UInt8}, boundary)
-    boundbytes_end = convert(Vector{UInt8}, boundary_end)
+    boundbytes = convert(Vector{UInt8}, codeunits(boundary))
+    boundbytes_end = convert(Vector{UInt8}, codeunits(boundary_end))
 
     boundloc = searcharr(data, boundbytes, 1)
     endpos = startpos = last(boundloc) + 1
@@ -162,14 +162,14 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
     res = HTTP.Response(500)
     
     try
-        comps = split(getfield(req, :target), '?', limit=2, keep=false)
+        comps = Compat.split(getfield(req, :target), '?', limit=2, keepempty=false)
         if isempty(comps)
             res = HTTP.Response(404)
         else
             res = preproc(req)
             if res === nothing
-                comps = split(getfield(req, :target), '?', limit=2, keep=false)
-                path = shift!(comps)
+                comps = Compat.split(getfield(req, :target), '?', limit=2, keepempty=false)
+                path = popfirst!(comps)
                 data_dict = isempty(comps) ? Dict{String,String}() : HTTP.queryparams(comps[1])
                 multipart_boundary = get_multipart_form_boundary(req)
                 if multipart_boundary === nothing
@@ -177,12 +177,12 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
                 else
                     data_dict = parsepostdata(req, data_dict, multipart_boundary)
                 end
-                args = map(String, split(path, '/', keep=false))
+                args = map(String, Compat.split(path, '/', keepempty=false))
 
                 if isempty(args) || !isvalidcmd(args[1])
                     res = HTTP.Response(404)
                 else
-                    cmd = shift!(args)
+                    cmd = popfirst!(args)
                     @static if isdefined(Base, Symbol("@info"))
                         @info("waiting for a handler")
                     else
