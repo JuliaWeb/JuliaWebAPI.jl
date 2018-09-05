@@ -1,8 +1,6 @@
 using JuliaWebAPI
-using Logging
-using Compat
-using Compat.Test
-using Compat.Distributed
+using Test
+using Distributed
 
 include("clnt.jl")
 

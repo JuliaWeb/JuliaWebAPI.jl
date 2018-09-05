@@ -1,15 +1,11 @@
-__precompile__()
-
 module JuliaWebAPI
 
 using ZMQ
 using JSON
-using Logging
 using HTTP
-using Compat
-using Compat.Base64
-using Compat.Sockets
-using Compat.Serialization
+using Base64
+using Sockets
+using Serialization
 
 import Base: close
 

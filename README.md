@@ -30,7 +30,6 @@ Create a file `srvr.jl` with the following code
 ```julia
 # Load required packages
 using JuliaWebAPI
-using Compat
 
 # Define functions testfn1 and testfn2 that we shall expose
 function testfn1(arg1, arg2; narg1="1", narg2="2")
@@ -51,8 +50,6 @@ julia srvr.jl &
 Then, on a Julia REPL, run the following code
 ```julia
 using JuliaWebAPI   #Load package
-using Logging
-Logging.configure(level=INFO);
 
 #Create the ZMQ client that talks to the ZMQ listener above
 const apiclnt = APIInvoker("tcp://127.0.0.1:9999");
