@@ -1,7 +1,6 @@
 # Tests a shortcut api to create ZMQ responder with JSON msg format
 using JuliaWebAPI
-using Compat
-using Compat.Test
+using Test
 
 include("srvr.jl")
 

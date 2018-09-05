@@ -91,11 +91,7 @@ function _dict_fmt(code::Int, headers::Dict{String,String}, resp, id=nothing)
 
     if !isempty(headers)
         msg["hdrs"] = headers
-        @static if isdefined(Base, Symbol("@debug"))
-            @debug("sending headers", headers)
-        else
-            Logging.debug("sending headers: ", headers)
-        end
+        @debug("sending headers", headers)
     end
 
     msg["code"] = code

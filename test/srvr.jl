@@ -3,8 +3,7 @@
 # Call `run_srvr` to start server otherwise.
 using JuliaWebAPI
 using Logging
-using Compat
-using Compat.Sockets
+using Sockets
 using ZMQ
 using JSON
 using HTTP
@@ -16,20 +15,11 @@ const JSON_RESP_HDRS = Dict{String,String}("Content-Type" => "application/json; 
 const BINARY_RESP_HDRS = Dict{String,String}("Content-Type" => "application/octet-stream")
 
 function run_srvr(fmt, tport, async=false, openaccess=false)
-    @static if isdefined(Base, Symbol("@info"))
-        global_logger(SimpleLogger(open("apisrvr_test.log", "a"), Logging.Info))
-        @info("queue is at $SRVR_ADDR")
-    else
-        Logging.configure(level=Logging.INFO, filename="apisrvr_test.log")
-        Logging.info("queue is at $SRVR_ADDR")
-    end
+    global_logger(SimpleLogger(open("apisrvr_test.log", "a"), Logging.Info))
+    @info("queue is at $SRVR_ADDR")
 
     api = APIResponder(tport, fmt, nothing, openaccess)
-    @static if isdefined(Base, Symbol("@info"))
-        @info("responding with: $api")
-    else
-        Logging.info("responding with: $api")
-    end
+    @info("responding with: $api")
 
     register(api, testfn1; resp_json=true, resp_headers=JSON_RESP_HDRS)
     register(api, testfn2)
@@ -63,11 +53,7 @@ function wait_for_httpsrvr()
             close(sock)
             return
         catch
-            @static if isdefined(Base, Symbol("@info"))
-                @info("waiting for httpserver to come up at port 8888...")
-            else
-                Logging.info("waiting for httpserver to come up at port 8888...")
-            end
+            @info("waiting for httpserver to come up at port 8888...")
             sleep(5)
         end
     end

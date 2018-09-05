@@ -154,21 +154,17 @@ function get_multipart_form_boundary(req::HTTP.Request)
 end
 
 function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HTTP.Request) where {T,F}
-    @static if isdefined(Base, Symbol("@info"))
-        @info("processing", target=getfield(req, :target))
-    else
-        Logging.info("processing request ", req)
-    end
+    @info("processing", target=getfield(req, :target))
     res = HTTP.Response(500)
     
     try
-        comps = Compat.split(getfield(req, :target), '?', limit=2, keepempty=false)
+        comps = split(getfield(req, :target), '?', limit=2, keepempty=false)
         if isempty(comps)
             res = HTTP.Response(404)
         else
             res = preproc(req)
             if res === nothing
-                comps = Compat.split(getfield(req, :target), '?', limit=2, keepempty=false)
+                comps = split(getfield(req, :target), '?', limit=2, keepempty=false)
                 path = popfirst!(comps)
                 data_dict = isempty(comps) ? Dict{String,String}() : HTTP.queryparams(comps[1])
                 multipart_boundary = get_multipart_form_boundary(req)
@@ -177,33 +173,21 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
                 else
                     data_dict = parsepostdata(req, data_dict, multipart_boundary)
                 end
-                args = map(String, Compat.split(path, '/', keepempty=false))
+                args = map(String, split(path, '/', keepempty=false))
 
                 if isempty(args) || !isvalidcmd(args[1])
                     res = HTTP.Response(404)
                 else
                     cmd = popfirst!(args)
-                    @static if isdefined(Base, Symbol("@info"))
-                        @info("waiting for a handler")
-                    else
-                        Logging.info("waiting for a handler")
-                    end
+                    @info("waiting for a handler")
                     api = take!(apis)
                     try
                         if isempty(data_dict)
-                            @static if isdefined(Base, Symbol("@debug"))
-                                @debug("calling", cmd, args)
-                            else
-                                Logging.debug("calling cmd ", cmd, ", with args ", args)
-                            end
+                            @debug("calling", cmd, args)
                             res = httpresponse(api.format, apicall(api, cmd, args...))
                         else
                             vargs = make_vargs(data_dict)
-                            @static if isdefined(Base, Symbol("@debug"))
-                                @debug("calling", cmd, args, vargs)
-                            else
-                                Logging.debug("calling cmd ", cmd, ", with args ", args, ", vargs ", vargs)
-                            end
+                            @debug("calling", cmd, args, vargs)
                             res = httpresponse(api.format, apicall(api, cmd, args...; vargs...))
                         end
                     finally
@@ -214,14 +198,10 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
         end
     catch e
         res = HTTP.Response(500)
-        Base.showerror(Compat.stderr, e, catch_backtrace())
+        Base.showerror(stderr, e, catch_backtrace())
         err("Exception in handler: ", e)
     end
-    @static if isdefined(Base, Symbol("@debug"))
-        @debug("response", res)
-    else
-        Logging.debug("\tresponse ", res)
-    end
+    @debug("response", res)
     return res
 end
 
@@ -245,11 +225,7 @@ end
 
 run_http(api::Union{Vector{APIInvoker{T,F}},APIInvoker{T,F}}, port::Int, preproc::Function=default_preproc; kwargs...) where {T,F} = run_http(HttpRpcServer(api, preproc), port; kwargs...)
 function run_http(httprpc::HttpRpcServer{T,F}, port::Int; kwargs...) where {T,F}
-    @static if isdefined(Base, Symbol("@debug"))
-        @debug("running HTTP RPC server...")
-    else
-        Logging.debug("running HTTP RPC server...")
-    end
+    @debug("running HTTP RPC server...")
     HTTP.listen(ip"0.0.0.0", port; kwargs...) do req::HTTP.Request
         HTTP.handle(httprpc.handler, req)
     end

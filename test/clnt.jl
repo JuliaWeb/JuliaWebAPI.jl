@@ -4,17 +4,12 @@
 using JuliaWebAPI
 using Logging
 using ZMQ
-using Compat
-using Compat.Test
-using Compat.Random
+using Test
+using Random
 using HTTP
 using JSON
 
-@static if isdefined(Base, Symbol("@info"))
-    global_logger(ConsoleLogger(stderr, Logging.Info))
-else
-    Logging.configure(level=INFO)
-end
+global_logger(ConsoleLogger(stderr, Logging.Info))
 
 const NCALLS = 100
 const APIARGS = randperm(NCALLS*4)
@@ -76,13 +71,13 @@ function run_clnt(fmt, tport)
     @test resp["code"] == 404
     resp = apicall(apiclnt, "testArray", "no such argument")
     @test resp["code"] == 500
-    @test Compat.occursin("MethodError", resp["data"])
+    @test occursin("MethodError", resp["data"])
 
     # Test exceptions
     println("testing server method exception handling...")
     resp = apicall(apiclnt, "testException")
     @test resp["code"] == 500
-    @test Compat.occursin("testing exception handling", resp["data"]["data"])
+    @test occursin("testing exception handling", resp["data"]["data"])
 
     close(ctx)
     close(tport)

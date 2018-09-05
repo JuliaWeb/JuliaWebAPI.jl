@@ -1,7 +1,5 @@
 using JuliaWebAPI
-using Compat
-using Compat.Base64
-using Logging
+using Base64
 using GZip
 
 const CONTENT_DISPOSITION_TEMPLATE = "attachment; filename="

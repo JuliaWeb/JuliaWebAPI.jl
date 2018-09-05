@@ -50,11 +50,7 @@ TODO: validate method belongs to module?
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
                   resp_headers::Dict=Dict{String,String}(), endpt=default_endpoint(f))
-    @static if isdefined(Base, Symbol("@debug"))
-        @debug("registering", endpt)
-    else
-        Logging.debug("registering endpoint [$endpt]")
-    end
+    @debug("registering", endpt)
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn # make fluent api possible
 end
@@ -135,27 +131,15 @@ end
 """start processing as a server"""
 function process(conn::APIResponder; async::Bool=false)
     if async
-        @static if isdefined(Base, Symbol("@debug"))
-            @debug("processing async...")
-        else
-            Logging.debug("processing async...")
-        end
+        @debug("processing async...")
         @async process(conn)
     else
-        @static if isdefined(Base, Symbol("@debug"))
-            @debug("processing...")
-        else
-            Logging.debug("processing...")
-        end
+        @debug("processing...")
         while true
             msg = juliaformat(conn.format, recvreq(conn.transport))
 
             command = cmd(conn.format, msg)
-            @static if isdefined(Base, Symbol("@info"))
-                @info("received", command)
-            else
-                Logging.info("received request: ", command)
-            end
+            @info("received", command)
 
             if startswith(command, ':')    # is a control command
                 ctrlcmd = Symbol(command[2:end])
@@ -189,11 +173,7 @@ function process(conn::APIResponder; async::Bool=false)
             end
         end
         close(conn.transport)
-        @static if isdefined(Base, Symbol("@info"))
-            @info("stopped processing.")
-        else
-            Logging.info("stopped processing.")
-        end
+        @info("stopped processing.")
     end
     conn
 end
