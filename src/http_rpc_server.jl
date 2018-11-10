@@ -21,11 +21,11 @@ function parsepostdata(req, query)
     req_body = getfield(req, :body)
 
     if !isempty(req_body)
-        idx = findfirst(req_body, UInt8('\0'))
-        idx = (idx == 0) ? endof(req_body) : (idx - 1)
+        idx = findfirst(isequal(UInt8('\0'), req_body))
+        idx = (idx == nothing) ? lastindex(req_body) : (idx - 1)
         post_data = (idx == 0) ? String(req_body) : String(req_body[1:(idx-1)])
     end
-    
+
     ('=' in post_data) || (return query)
     merge(query, HTTP.queryparams(post_data))
 end
@@ -156,7 +156,7 @@ end
 function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HTTP.Request) where {T,F}
     @info("processing", target=getfield(req, :target))
     res = HTTP.Response(500)
-    
+
     try
         comps = split(getfield(req, :target), '?', limit=2, keepempty=false)
         if isempty(comps)
