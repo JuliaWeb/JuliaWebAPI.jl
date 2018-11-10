@@ -39,7 +39,12 @@ end
 testfn2(arg1, arg2; narg1="1", narg2="2") = testfn1(arg1, arg2; narg1=narg1, narg2=narg2)
 
 # Expose testfn1 and testfn2 via a ZMQ listener
-process([(testfn1, true), (testfn2, false)], "tcp://127.0.0.1:9999"; bind=true)
+process(
+    JuliaWebAPI.create_responder([
+        (testfn1, true),
+        (testfn2, false)
+    ], "tcp://127.0.0.1:9999", true, "")
+)
 ```
 
 Start the server process in the background. This process will run the ZMQ listener.
@@ -67,12 +72,11 @@ This will return the following JSON response to your browser, which is the resul
 Example of an authentication filter implemented using a pre-processor:
 
 ````
-function auth_preproc(req::Request, res::Response)
+function auth_preproc(req::HTTP.Request)
     if !validate(req)
-        res.status = 401
-        return false
+        return HTTP.Response(401)
     end
-    return true
+    return nothing
 end
 run_http(apiclnt, 8888, auth_preproc)
 ````
