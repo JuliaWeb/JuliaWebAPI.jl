@@ -30,8 +30,7 @@ APIResponder(addr::String, ctx::Context=Context(), bound::Bool=true, id=nothing,
 APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
 
 function Base.show(io::IO, x::APIResponder)
-    println(io, "JuliaWebAPI.APIResponder with endpoints:")
-    Base.show_comma_array(io, keys(x.endpoints), "","")
+    print(io, "JuliaWebAPI.APIResponder with $(length(x.endpoints)) endpoints (", join(keys(x.endpoints), ","), ")")
 end
 
 function default_endpoint(f::Function)
@@ -50,7 +49,7 @@ TODO: validate method belongs to module?
 function register(conn::APIResponder, f::Function;
                   resp_json::Bool=false,
                   resp_headers::Dict=Dict{String,String}(), endpt=default_endpoint(f))
-    @debug("registering", endpt)
+    @info("registering", endpt)
     conn.endpoints[endpt] = APISpec(f, resp_json, resp_headers)
     return conn # make fluent api possible
 end
@@ -147,11 +146,7 @@ function process(conn::APIResponder; async::Bool=false)
                     respond(conn, nothing, :terminate, "")
                     break
                 else
-                    @static if isdefined(Base, Symbol("@error"))
-                        @error("invalid control command ", command)
-                    else
-                        err("invalid control command ", command)
-                    end
+                    @error("invalid control command ", command)
                     continue
                 end
             end
@@ -200,9 +195,5 @@ function logerr(msg, ex)
     iob = IOBuffer()
     write(iob, msg)
     showerror(iob, ex)
-    @static if isdefined(Base, Symbol("@error"))
-        @error(String(take!(iob)))
-    else
-        err(String(take!(iob)))
-    end
+    @error(String(take!(iob)))
 end
