@@ -30,8 +30,7 @@ APIResponder(addr::String, ctx::Context=Context(), bound::Bool=true, id=nothing,
 APIResponder(ip::IPv4, port::Int, ctx::Context=Context()) = APIResponder("tcp://$ip:$port", ctx)
 
 function Base.show(io::IO, x::APIResponder)
-    println(io, "JuliaWebAPI.APIResponder with $(length(x.endpoints)) endpoints:")
-    Base.show_comma_array(io, keys(x.endpoints), "","")
+    print(io, "JuliaWebAPI.APIResponder with $(length(x.endpoints)) endpoints (", join(keys(x.endpoints), ","), ")")
 end
 
 function default_endpoint(f::Function)
