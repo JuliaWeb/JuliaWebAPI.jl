@@ -106,6 +106,7 @@ function _dict_httpresponse(resp)
             hdrs[k] = v
         end
     end
+    hdrs["Access-Control-Allow-Origin"] = "*"
     data = get(resp, "data", "")
     respdata = isa(data, Array) ? convert(Array{UInt8}, data) :
                isa(data, Dict) ? JSON.json(data) :
