@@ -9,7 +9,7 @@ end
 
 function isvalidcmd(cmd)
     isempty(cmd) && return false
-    Base.is_id_start_char(cmd[1]) || return false
+    ((cmd[1] == ':') || Base.is_id_start_char(cmd[1])) || return false
     for c in cmd
         Base.is_id_char(c) || return false
     end
