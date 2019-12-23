@@ -97,7 +97,7 @@ function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any}
         result = dynamic_invoke(conn, api.fn, args...; data...)
         respond(conn, api, :success, result)
     catch ex
-        logerr("api_exception: ", ex)
+        @error("api_exception", exception=(ex, backtrace()))
         respond(conn, api, :api_exception, string(ex))
     end
 end
@@ -163,7 +163,7 @@ function process(conn::APIResponder; async::Bool=false)
             try
                 call_api(conn.endpoints[command], conn, args(conn.format, msg), data(conn.format, msg))
             catch ex
-                logerr("exception ", ex)
+                @error("exception in process", exception=(ex, backtrace()))
                 respond(conn, conn.endpoints[command], :invalid_data)
             end
         end
@@ -189,11 +189,4 @@ function create_responder(apispecs::Array, addr, bind, nid, open=false)
         _add_spec(spec, api)
     end
     api
-end
-
-function logerr(msg, ex)
-    iob = IOBuffer()
-    write(iob, msg)
-    showerror(iob, ex)
-    @error(String(take!(iob)))
 end
