@@ -9,7 +9,7 @@ end
 
 function isvalidcmd(cmd)
     isempty(cmd) && return false
-    Base.is_id_start_char(cmd[1]) || return false
+    ((cmd[1] == ':') || Base.is_id_start_char(cmd[1])) || return false
     for c in cmd
         Base.is_id_char(c) || return false
     end
@@ -198,8 +198,7 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
         end
     catch e
         res = HTTP.Response(500)
-        Base.showerror(stderr, e, catch_backtrace())
-        @error("Exception in handler: ", e)
+        @error("Exception in handler: ", exception=(e, backtrace()))
     end
     @debug("response", res)
     return res
