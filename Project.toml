@@ -15,7 +15,7 @@ ZMQ = "c2297ded-f4af-51ae-bb23-16f91089e4e1"
 
 [compat]
 HTTP = "0.8"
-ZMQ = "1"
+ZMQ = "1.0"
 julia = "1"
 
 [extras]
