@@ -59,7 +59,7 @@ using JuliaWebAPI   #Load package
 #Create the ZMQ client that talks to the ZMQ listener above
 const apiclnt = APIInvoker("tcp://127.0.0.1:9999");
 
-#Starts the HTTP server in current process
+#Start the HTTP server in current process (Ctrl+C to interrupt)
 run_http(apiclnt, 8888)
 ```
 
@@ -71,7 +71,7 @@ This will return the following JSON response to your browser, which is the resul
 
 Example of an authentication filter implemented using a pre-processor:
 
-````
+```julia
 function auth_preproc(req::HTTP.Request)
     if !validate(req)
         return HTTP.Response(401)
@@ -79,4 +79,4 @@ function auth_preproc(req::HTTP.Request)
     return nothing
 end
 run_http(apiclnt, 8888, auth_preproc)
-````
+```
