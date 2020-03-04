@@ -11,7 +11,9 @@ function run_test(script, flags)
     srvrscript = joinpath(dirname(@__FILE__), script)
     srvrcmd = `$(joinpath(Sys.BINDIR, "julia")) $cov_flag $inline_flag $script $flags`
     println("Running tests from ", script, "\n", "="^60)
-    ret = run(srvrcmd)
+    ret = withenv("JULIA_DEPOT_PATH"=>join(DEPOT_PATH, Sys.iswindows() ? ';' : ':')) do
+        run(srvrcmd)
+    end
     println("Finished ", script, "\n", "="^60)
     nothing
 end

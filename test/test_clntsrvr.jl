@@ -13,7 +13,9 @@ function spawn_srvr()
     srvrscript = joinpath(dirname(@__FILE__), "srvr.jl")
     srvrcmd = `$(joinpath(Sys.BINDIR, "julia")) $cov_flag $inline_flag $srvrscript --runsrvr`
     println("spawining $srvrcmd")
-    srvrproc = @static (VERSION < v"0.7.0-") ? spawn(srvrcmd) : run(srvrcmd, wait=false)
+    srvrproc = withenv("JULIA_DEPOT_PATH"=>join(DEPOT_PATH, Sys.iswindows() ? ';' : ':')) do
+        run(srvrcmd, wait=false)
+    end
 end
 
 function kill_spawned_srvr(srvrproc)
