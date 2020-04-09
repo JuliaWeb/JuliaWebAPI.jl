@@ -97,7 +97,7 @@ function call_api(api::APISpec, conn::APIResponder, args, data::Dict{Symbol,Any}
         result = dynamic_invoke(conn, api.fn, args...; data...)
         respond(conn, api, :success, result)
     catch ex
-        @error("api_exception", exception=(ex, backtrace()))
+        @error("api_exception", exception=(ex, catch_backtrace()))
         respond(conn, api, :api_exception, string(ex))
     end
 end
