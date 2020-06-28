@@ -197,8 +197,8 @@ function http_handler(apis::Channel{APIInvoker{T,F}}, preproc::Function, req::HT
             end
         end
     catch e
+        @error("Exception in handler: ", exception=(e, catch_backtrace()))
         res = HTTP.Response(500)
-        @error("Exception in handler: ", exception=(e, backtrace()))
     end
     @debug("response", res)
     return res
