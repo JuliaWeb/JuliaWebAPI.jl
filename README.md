@@ -1,6 +1,6 @@
 # JuliaWebAPI.jl
 
-[![Build Status](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl.svg?branch=master)](https://travis-ci.org/JuliaWeb/JuliaWebAPI.jl)
+[![Build Status](https://github.com/JuliaWeb/JuliaWebAPI.jl/workflows/CI/badge.svg)](https://github.com/JuliaWeb/JuliaWebAPI.jl/actions?query=workflow%3ACI+branch%3Amaster)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaWeb/JuliaWebAPI.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaWeb/JuliaWebAPI.jl?branch=master)
 
 Facilitates wrapping Julia functions into a remote callable API via message queues (e.g. ZMQ, RabbitMQ) and HTTP.
