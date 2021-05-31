@@ -3,7 +3,7 @@ uuid = "480116ec-64ea-5dec-baca-db6b11e96e37"
 keywords = ["julia", "rest", "api"]
 license = "MIT"
 desc = "Julia package for deploying APIs"
-version = "0.6.2"
+version = "0.6.3"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -14,7 +14,7 @@ Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 ZMQ = "c2297ded-f4af-51ae-bb23-16f91089e4e1"
 
 [compat]
-HTTP = "0.8"
+HTTP = "0.8, 0.9"
 ZMQ = "1.0, 1.1, 1.2"
 JSON = "0.21"
 julia = "1"
