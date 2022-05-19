@@ -78,11 +78,9 @@ function get_resp(api::Union{Nothing,APISpec}, status::Symbol, resp=nothing)
     end
 end
 
-# Note: needs to be changed when https://github.com/JuliaLang/julia/pull/22646 is merged
 function dynamic_invoke(conn::APIResponder, f, args...; kwargs...)
-    if conn.open && isdefined(Core, :_apply_latest)
-        inner() = f(args...; kwargs...)
-        Core._apply_latest(inner)
+    if conn.open
+        Base.invokelatest(f, args...; kwargs...)
     else
         f(args...; kwargs...)
     end
